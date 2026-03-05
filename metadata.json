@@ -1,0 +1,5 @@
+{
+  "name": "Electa",
+  "description": "online recommendation app",
+  "requestFramePermissions": ["geolocation"]
+}
