@@ -32,79 +32,76 @@ export async function getRecommendations(
     Recent History: ${history.join(", ")}
     User Location: ${location || "Unknown"}
 
-    Act as an Agentic AI Recommendation Engine. Based on the user's current mood, preferences, and location, 
-    recommend 6 items in the ${category} category. 
+    Act as a precise recommendation engine. Recommend exactly 12 items in the ${category} category based on mood: ${mood}.
     
     CRITICAL LOCATION INSTRUCTION: 
-    The user is currently at coordinates: ${location || "a major city"}.
-    If category is 'restaurants', you MUST recommend REAL, SPECIFIC places that exist in the city corresponding to these coordinates. 
-    Do not give generic names. Provide actual addresses and names of establishments that would be found in that area.
-    If coordinates are near San Francisco (37.77, -122.41), recommend SF spots. If they are elsewhere, adapt accordingly.
+    User coordinates: ${location || "major city"}.
+    If category='restaurants', recommend ONLY REAL places AT THIS LOCATION. 
     
-    For each item, provide:
-    - title
-    - short description
-    - category
-    - 'reason' (why it fits their current mood/location)
-    - details (rating, year/opening hours, address if applicable, tags)
-
-    Return the result as a JSON array of objects.
+    Format: Raw JSON array of exactly 12 objects. NO markdown.
+    [
+      {
+        "id": "item1",
+        "title": "...",
+        "description": "1 sentence max",
+        "category": "...",
+        "reason": "1 short sentence max",
+        "details": {
+          "rating": "...",
+          "year": "...",
+          "address": "...",
+          "tags": ["..."],
+          "link": "..."
+        }
+      }
+    ]
   `;
 
-  const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
-    contents: prompt,
-    config: {
-      tools: [{ googleSearch: {} }],
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.ARRAY,
-        items: {
-          type: Type.OBJECT,
-          properties: {
-            id: { type: Type.STRING },
-            title: { type: Type.STRING },
-            description: { type: Type.STRING },
-            category: { type: Type.STRING },
-            reason: { type: Type.STRING },
-            details: {
-              type: Type.OBJECT,
-              properties: {
-                rating: { type: Type.STRING },
-                year: { type: Type.STRING },
-                address: { type: Type.STRING },
-                tags: { 
-                  type: Type.ARRAY,
-                  items: { type: Type.STRING }
-                },
-                link: { type: Type.STRING },
-                imageUrl: { type: Type.STRING, description: "A real, direct image URL for this specific item found via search." },
-              }
-            }
-          },
-          required: ["id", "title", "description", "category", "reason", "details"],
-        },
+  let text = "";
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
       },
-    },
-  });
+    });
+    text = response.text || "";
+  } catch (error: any) {
+    console.error("Gemini API error:", error);
+    if (error.status === 429) {
+      throw new Error("RATE_LIMIT");
+    }
+    return [];
+  }
 
-  const text = response.text;
   if (!text) return [];
 
-  const rawRecs = JSON.parse(text);
-  
-  return rawRecs.map((rec: any) => {
-    // Clean up the image URL if it's a search result or provide a high-quality fallback
-    let finalImageUrl = rec.details.imageUrl;
-    
-    if (!finalImageUrl || finalImageUrl.includes("example.com") || !finalImageUrl.startsWith("http")) {
-      // Use a more descriptive seed for better Unsplash/Picsum results
-      const seed = encodeURIComponent(`${rec.title} ${rec.category}`);
-      
-      // Fallback to picsum if unsplash source is unreliable in this environment
-      finalImageUrl = `https://picsum.photos/seed/${rec.title.replace(/\s+/g, '')}/800/600`;
+  let rawRecs = [];
+  try {
+    const match = text.match(/\[\s*\{[\s\S]*\}\s*\]/);
+    if (match) {
+      rawRecs = JSON.parse(match[0]);
+    } else {
+      console.error("No JSON array found in Gemini response:", text);
+      return [];
     }
-    
+  } catch (e) {
+    console.error("Failed to parse JSON response from Gemini:", text);
+    return [];
+  }
+
+  return rawRecs.map((rec: any) => {
+    // Extract the imageUrl from the AI's response details
+    let finalImageUrl = rec.details?.imageUrl || rec.imageUrl;
+
+    // Only fallback if the AI blatantly failed to provide a real URL despite strict instructions
+    if (!finalImageUrl || finalImageUrl.includes("example.com") || finalImageUrl.includes("placeholder") || !finalImageUrl.startsWith("http")) {
+      console.log("AI failed to provide real image for", rec.title, "- using deterministic fallback");
+      const seed = encodeURIComponent(`${rec.title} ${rec.category}`);
+      finalImageUrl = `https://picsum.photos/seed/${seed}/800/600`;
+    }
+
     return {
       ...rec,
       imageUrl: finalImageUrl

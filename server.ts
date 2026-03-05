@@ -1,24 +1,30 @@
 import express from "express";
 import { createServer as createViteServer } from "vite";
-import Database from "better-sqlite3";
 import path from "path";
 import { fileURLToPath } from "url";
+import Database from "better-sqlite3";
+import bcrypt from "bcrypt";
+import fs from "fs";
+import dotenv from "dotenv";
 import axios from "axios";
+
+dotenv.config({ path: '.env.local' });
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const db = new Database("database.db");
+// Initialize DB
+const dbFile = path.join(__dirname, "database.db");
+const db = new Database(dbFile);
 
-// Initialize database
 db.exec(`
   CREATE TABLE IF NOT EXISTS users (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    email TEXT UNIQUE,
-    password TEXT,
-    name TEXT,
-    bio TEXT,
-    preferences TEXT
+    email TEXT UNIQUE NOT NULL,
+    password TEXT NOT NULL,
+    name TEXT NOT NULL,
+    bio TEXT DEFAULT '',
+    preferences TEXT DEFAULT '{"genres":[],"dietary":[],"interests":[]}'
   )
 `);
 
@@ -28,190 +34,254 @@ async function startServer() {
 
   app.use(express.json());
 
-  // Auth Routes
-  app.post("/api/auth/signup", (req, res) => {
+  // --- Auth APIs ---
+
+  app.post('/api/auth/signup', async (req, res) => {
     const { email, password, name } = req.body;
+    if (!email || !password || !name) {
+      return res.status(400).json({ error: "All fields are required" });
+    }
+
     try {
-      const stmt = db.prepare("INSERT INTO users (email, password, name, bio, preferences) VALUES (?, ?, ?, ?, ?)");
-      const info = stmt.run(email, password, name, "New user exploring Electa.", JSON.stringify({ genres: [], dietary: [], interests: [] }));
-      const user = db.prepare("SELECT * FROM users WHERE id = ?").get(info.lastInsertRowid);
-      res.json({ user: { ...user, preferences: JSON.parse(user.preferences as string) } });
-    } catch (err) {
-      res.status(400).json({ error: "Email already exists" });
+      const existing = db.prepare('SELECT id FROM users WHERE email = ?').get(email);
+      if (existing) {
+        return res.status(400).json({ error: "User already exists" });
+      }
+
+      const hash = await bcrypt.hash(password, 10);
+      const stmt = db.prepare('INSERT INTO users (email, password, name) VALUES (?, ?, ?)');
+      stmt.run(email, hash, name);
+
+      const user = {
+        email,
+        name,
+        bio: '',
+        preferences: { genres: [], dietary: [], interests: [] }
+      };
+
+      res.json({ user });
+    } catch (err: any) {
+      res.status(500).json({ error: "Detailed internal error" });
     }
   });
 
-  app.post("/api/auth/login", (req, res) => {
+  app.post('/api/auth/login', async (req, res) => {
     const { email, password } = req.body;
-    const user = db.prepare("SELECT * FROM users WHERE email = ? AND password = ?").get(email, password) as any;
-    if (user) {
-      res.json({ user: { ...user, preferences: JSON.parse(user.preferences as string) } });
-    } else {
-      res.status(401).json({ error: "Invalid credentials" });
-    }
-  });
-
-  // OAuth URL generation
-  app.get("/api/auth/google/url", (req, res) => {
-    const origin = req.query.origin as string;
-    const redirectUri = `${origin}/api/auth/google/callback`;
-    const params = new URLSearchParams({
-      client_id: process.env.GOOGLE_CLIENT_ID || "",
-      redirect_uri: redirectUri,
-      response_type: "code",
-      scope: "openid email profile",
-      access_type: "offline",
-      prompt: "select_account",
-      state: origin // Pass origin in state
-    });
-    res.json({ url: `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}` });
-  });
-
-  app.get("/api/auth/github/url", (req, res) => {
-    const origin = req.query.origin as string;
-    const redirectUri = `${origin}/api/auth/github/callback`;
-    const params = new URLSearchParams({
-      client_id: process.env.GITHUB_CLIENT_ID || "",
-      redirect_uri: redirectUri,
-      scope: "user:email",
-      prompt: "select_account",
-      state: origin // Pass origin in state
-    });
-    res.json({ url: `https://github.com/login/oauth/authorize?${params.toString()}` });
-  });
-
-  // OAuth Callbacks
-  app.get("/api/auth/google/callback", async (req, res) => {
-    const { code, state } = req.query;
-    const origin = (state as string) || `${req.protocol}://${req.get('host')}`;
-    const redirectUri = `${origin}/api/auth/google/callback`;
-
-    if (!code) {
-      return res.send(`<html><body><script>window.opener.postMessage({ type: 'OAUTH_ERROR', error: 'No authorization code received' }, '*'); window.close();</script></body></html>`);
-    }
-
-    if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
-      return res.send(`<html><body><script>window.opener.postMessage({ type: 'OAUTH_ERROR', error: 'Google OAuth keys not configured in environment' }, '*'); window.close();</script></body></html>`);
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email and password are required" });
     }
 
     try {
-      const tokenRes = await axios.post("https://oauth2.googleapis.com/token", {
-        code,
-        client_id: process.env.GOOGLE_CLIENT_ID,
-        client_secret: process.env.GOOGLE_CLIENT_SECRET,
-        redirect_uri: redirectUri,
-        grant_type: "authorization_code"
-      });
-
-      const { access_token } = tokenRes.data;
-      const userRes = await axios.get("https://www.googleapis.com/oauth2/v3/userinfo", {
-        headers: { Authorization: `Bearer ${access_token}` }
-      });
-
-      const { email, name, sub } = userRes.data;
-      let user = db.prepare("SELECT * FROM users WHERE email = ?").get(email) as any;
-
-      if (!user) {
-        const stmt = db.prepare("INSERT INTO users (email, password, name, bio, preferences) VALUES (?, ?, ?, ?, ?)");
-        const info = stmt.run(email, `oauth-${sub}`, name || email.split('@')[0], "New user exploring Electa.", JSON.stringify({ genres: [], dietary: [], interests: [] }));
-        user = db.prepare("SELECT * FROM users WHERE id = ?").get(info.lastInsertRowid);
+      const userRecord: any = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+      if (!userRecord) {
+        return res.status(401).json({ error: "Invalid credentials" });
       }
 
-      const userData = { ...user, preferences: JSON.parse(user.preferences as string) };
-      res.send(`
-        <html>
-          <body>
-            <script>
-              window.opener.postMessage({ type: 'OAUTH_SUCCESS', user: ${JSON.stringify(userData)} }, '*');
-              window.close();
-            </script>
-          </body>
-        </html>
-      `);
-    } catch (err) {
-      console.error("Google OAuth error:", err);
-      res.send(`<html><body><script>window.opener.postMessage({ type: 'OAUTH_ERROR', error: 'Google authentication failed' }, '*'); window.close();</script></body></html>`);
+      const match = await bcrypt.compare(password, userRecord.password);
+      if (!match) {
+        return res.status(401).json({ error: "Invalid credentials" });
+      }
+
+      const user = {
+        email: userRecord.email,
+        name: userRecord.name,
+        bio: userRecord.bio,
+        preferences: JSON.parse(userRecord.preferences)
+      };
+
+      res.json({ user });
+    } catch (err: any) {
+      res.status(500).json({ error: "Detailed internal error" });
     }
   });
 
-  app.get("/api/auth/github/callback", async (req, res) => {
-    const { code, state } = req.query;
-    const origin = (state as string) || `${req.protocol}://${req.get('host')}`;
-
-    if (!code) {
-      return res.send(`<html><body><script>window.opener.postMessage({ type: 'OAUTH_ERROR', error: 'No authorization code received' }, '*'); window.close();</script></body></html>`);
-    }
-
-    if (!process.env.GITHUB_CLIENT_ID || !process.env.GITHUB_CLIENT_SECRET) {
-      return res.send(`<html><body><script>window.opener.postMessage({ type: 'OAUTH_ERROR', error: 'GitHub OAuth keys not configured in environment' }, '*'); window.close();</script></body></html>`);
-    }
-
-    try {
-      const tokenRes = await axios.post("https://github.com/login/oauth/access_token", {
-        client_id: process.env.GITHUB_CLIENT_ID,
-        client_secret: process.env.GITHUB_CLIENT_SECRET,
-        code
-      }, {
-        headers: { Accept: "application/json" }
-      });
-
-      const { access_token } = tokenRes.data;
-      const userRes = await axios.get("https://api.github.com/user", {
-        headers: { Authorization: `Bearer ${access_token}` }
-      });
-
-      const emailsRes = await axios.get("https://api.github.com/user/emails", {
-        headers: { Authorization: `Bearer ${access_token}` }
-      });
-
-      const primaryEmail = emailsRes.data.find((e: any) => e.primary).email;
-      const { name, id } = userRes.data;
-
-      let user = db.prepare("SELECT * FROM users WHERE email = ?").get(primaryEmail) as any;
-
-      if (!user) {
-        const stmt = db.prepare("INSERT INTO users (email, password, name, bio, preferences) VALUES (?, ?, ?, ?, ?)");
-        const info = stmt.run(primaryEmail, `oauth-${id}`, name || primaryEmail.split('@')[0], "New user exploring Electa.", JSON.stringify({ genres: [], dietary: [], interests: [] }));
-        user = db.prepare("SELECT * FROM users WHERE id = ?").get(info.lastInsertRowid);
-      }
-
-      const userData = { ...user, preferences: JSON.parse(user.preferences as string) };
-      res.send(`
-        <html>
-          <body>
-            <script>
-              window.opener.postMessage({ type: 'OAUTH_SUCCESS', user: ${JSON.stringify(userData)} }, '*');
-              window.close();
-            </script>
-          </body>
-        </html>
-      `);
-    } catch (err) {
-      console.error("GitHub OAuth error:", err);
-      res.send(`<html><body><script>window.opener.postMessage({ type: 'OAUTH_ERROR', error: 'GitHub authentication failed' }, '*'); window.close();</script></body></html>`);
-    }
-  });
-
-  app.post("/api/user/update", (req, res) => {
+  app.post('/api/user/update', (req, res) => {
     const { email, bio, preferences } = req.body;
+    if (!email) {
+      return res.status(400).json({ error: "Email is required" });
+    }
+
     try {
-      const stmt = db.prepare("UPDATE users SET bio = ?, preferences = ? WHERE email = ?");
-      stmt.run(bio, JSON.stringify(preferences), email);
-      const user = db.prepare("SELECT * FROM users WHERE email = ?").get(email) as any;
-      res.json({ user: { ...user, preferences: JSON.parse(user.preferences as string) } });
+      const stmt = db.prepare('UPDATE users SET bio = ?, preferences = ? WHERE email = ?');
+      stmt.run(bio || '', JSON.stringify(preferences || { genres: [], dietary: [], interests: [] }), email);
+
+      const userRecord: any = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+      if (!userRecord) {
+        return res.status(404).json({ error: "User not found" });
+      }
+
+      const user = {
+        email: userRecord.email,
+        name: userRecord.name,
+        bio: userRecord.bio,
+        preferences: JSON.parse(userRecord.preferences)
+      };
+
+      res.json({ user });
+    } catch (err: any) {
+      res.status(500).json({ error: "Detailed internal error" });
+    }
+  });
+
+  // --- Real OAuth APIs ---
+  const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
+  const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
+  const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID;
+  const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET;
+
+  app.get('/api/auth/google/url', (req, res) => {
+    const origin = req.query.origin as string || '*';
+    const redirectUri = origin === '*' ? `${req.protocol}://${req.get('host')}/api/auth/google/callback` : `${origin}/api/auth/google/callback`;
+    const state = Buffer.from(JSON.stringify({ origin })).toString('base64');
+
+    const url = `https://accounts.google.com/o/oauth2/v2/auth?` +
+      `client_id=${GOOGLE_CLIENT_ID}` +
+      `&redirect_uri=${encodeURIComponent(redirectUri)}` +
+      `&response_type=code` +
+      `&scope=${encodeURIComponent('email profile')}` +
+      `&state=${state}`;
+
+    res.json({ url });
+  });
+
+  app.get('/api/auth/google/callback', async (req, res) => {
+    const code = req.query.code as string;
+    const state = req.query.state as string;
+
+    let origin = '*';
+    try { if (state) origin = JSON.parse(Buffer.from(state, 'base64').toString('utf8')).origin; } catch (e) { }
+
+    const redirectUri = origin === '*' ? `${req.protocol}://${req.get('host')}/api/auth/google/callback` : `${origin}/api/auth/google/callback`;
+
+    try {
+      const tokenRes = await axios.post('https://oauth2.googleapis.com/token', {
+        client_id: GOOGLE_CLIENT_ID,
+        client_secret: GOOGLE_CLIENT_SECRET,
+        code,
+        grant_type: 'authorization_code',
+        redirect_uri: redirectUri
+      });
+
+      const access_token = tokenRes.data.access_token;
+      const userRes = await axios.get('https://www.googleapis.com/oauth2/v2/userinfo', {
+        headers: { Authorization: `Bearer ${access_token}` }
+      });
+
+      const { email, name } = userRes.data;
+
+      let userRecord: any = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+      if (!userRecord) {
+        const stmt = db.prepare('INSERT INTO users (email, password, name, bio) VALUES (?, ?, ?, ?)');
+        stmt.run(email, 'oauth-user', name || 'Google User', 'Logged in with Google.');
+        userRecord = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+      }
+
+      const user = {
+        email: userRecord.email,
+        name: userRecord.name,
+        bio: userRecord.bio,
+        preferences: JSON.parse(userRecord.preferences)
+      };
+
+      res.send(`
+        <script>
+          window.opener.postMessage({ type: 'OAUTH_SUCCESS', user: ${JSON.stringify(user)} }, "${origin}");
+          window.close();
+        </script>
+      `);
     } catch (err) {
-      res.status(500).json({ error: "Failed to update profile" });
+      console.error("Google OAuth Error", err);
+      res.send(`
+        <script>
+          window.opener.postMessage({ type: 'OAUTH_ERROR', error: 'Google Authentication Failed' }, "${origin}");
+          window.close();
+        </script>
+      `);
+    }
+  });
+
+  app.get('/api/auth/github/url', (req, res) => {
+    const origin = req.query.origin as string || '*';
+    const state = Buffer.from(JSON.stringify({ origin })).toString('base64');
+
+    const url = `https://github.com/login/oauth/authorize?` +
+      `client_id=${GITHUB_CLIENT_ID}` +
+      `&scope=user:email` +
+      `&state=${state}`;
+
+    res.json({ url });
+  });
+
+  app.get('/api/auth/github/callback', async (req, res) => {
+    const code = req.query.code as string;
+    const state = req.query.state as string;
+
+    let origin = '*';
+    try { if (state) origin = JSON.parse(Buffer.from(state, 'base64').toString('utf8')).origin; } catch (e) { }
+
+    try {
+      const tokenRes = await axios.post('https://github.com/login/oauth/access_token', {
+        client_id: GITHUB_CLIENT_ID,
+        client_secret: GITHUB_CLIENT_SECRET,
+        code
+      }, { headers: { Accept: 'application/json' } });
+
+      const access_token = tokenRes.data.access_token;
+
+      const userRes = await axios.get('https://api.github.com/user', {
+        headers: { Authorization: `Bearer ${access_token}` }
+      });
+
+      const emailRes = await axios.get('https://api.github.com/user/emails', {
+        headers: { Authorization: `Bearer ${access_token}` }
+      });
+
+      const primaryEmail = emailRes.data.find((e: any) => e.primary)?.email || emailRes.data[0]?.email;
+      const name = userRes.data.name || userRes.data.login || 'GitHub User';
+
+      if (!primaryEmail) throw new Error("No GitHub email found");
+
+      let userRecord: any = db.prepare('SELECT * FROM users WHERE email = ?').get(primaryEmail);
+      if (!userRecord) {
+        const stmt = db.prepare('INSERT INTO users (email, password, name, bio) VALUES (?, ?, ?, ?)');
+        stmt.run(primaryEmail, 'oauth-user', name, 'Logged in with GitHub.');
+        userRecord = db.prepare('SELECT * FROM users WHERE email = ?').get(primaryEmail);
+      }
+
+      const user = {
+        email: userRecord.email,
+        name: userRecord.name,
+        bio: userRecord.bio,
+        preferences: JSON.parse(userRecord.preferences)
+      };
+
+      res.send(`
+        <script>
+          window.opener.postMessage({ type: 'OAUTH_SUCCESS', user: ${JSON.stringify(user)} }, "${origin}");
+          window.close();
+        </script>
+      `);
+    } catch (err) {
+      console.error("GitHub OAuth Error", err);
+      res.send(`
+        <script>
+          window.opener.postMessage({ type: 'OAUTH_ERROR', error: 'GitHub Authentication Failed' }, "${origin}");
+          window.close();
+        </script>
+      `);
     }
   });
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
+    console.log("Starting Vite in middleware mode...");
     const vite = await createViteServer({
       server: { middlewareMode: true },
       appType: "spa",
     });
     app.use(vite.middlewares);
   } else {
+    console.log("Serving static production build...");
     app.use(express.static(path.join(__dirname, "dist")));
     app.get("*", (req, res) => {
       res.sendFile(path.join(__dirname, "dist", "index.html"));
