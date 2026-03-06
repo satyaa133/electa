@@ -496,11 +496,20 @@ export default function App() {
       const left = window.screenX + (window.outerWidth - width) / 2;
       const top = window.screenY + (window.outerHeight - height) / 2;
 
-      window.open(
+      const popup = window.open(
         url,
         'google_oauth',
         `width=${width},height=${height},left=${left},top=${top}`
       );
+
+      if (popup) {
+        const checkClosed = setInterval(() => {
+          if (popup.closed) {
+            clearInterval(checkClosed);
+            setIsLoading(false);
+          }
+        }, 500);
+      }
     } catch (err) {
       setAuthError('Failed to initiate Google Sign-in');
       setIsLoading(false);
@@ -520,11 +529,20 @@ export default function App() {
       const left = window.screenX + (window.outerWidth - width) / 2;
       const top = window.screenY + (window.outerHeight - height) / 2;
 
-      window.open(
+      const popup = window.open(
         url,
         'github_oauth',
         `width=${width},height=${height},left=${left},top=${top}`
       );
+
+      if (popup) {
+        const checkClosed = setInterval(() => {
+          if (popup.closed) {
+            clearInterval(checkClosed);
+            setIsLoading(false);
+          }
+        }, 500);
+      }
     } catch (err) {
       setAuthError('Failed to initiate GitHub Sign-in');
       setIsLoading(false);
