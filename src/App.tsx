@@ -194,11 +194,13 @@ interface UserProfile {
   name: string;
   email: string;
   bio: string;
+  profile_photo?: string;
   preferences: {
     genres: string[];
     dietary: string[];
     interests: string[];
   };
+  bookmarks: Recommendation[];
 }
 
 export default function App() {
@@ -228,14 +230,23 @@ export default function App() {
   const [selectedRec, setSelectedRec] = useState<Recommendation | null>(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
-  const [editForm, setEditForm] = useState({ bio: '', preferences: { genres: [], dietary: [], interests: [] } });
+  const [editForm, setEditForm] = useState({
+    bio: '',
+    profile_photo: '',
+    preferences: { genres: [] as string[], dietary: [] as string[], interests: [] as string[] }
+  });
+  const [tagInputs, setTagInputs] = useState({ genres: '', dietary: '', interests: '' });
 
   // Theme hook - must be at top level before any conditional returns
   const { isDark, toggleTheme } = useTheme();
 
   useEffect(() => {
     if (user) {
-      setEditForm({ bio: user.bio, preferences: user.preferences });
+      setEditForm({
+        bio: user.bio || '',
+        profile_photo: user.profile_photo || '',
+        preferences: user.preferences
+      });
     }
   }, [user]);
 
@@ -375,10 +386,34 @@ export default function App() {
     }
   }, [recommendations]);
 
-  const handleFeedback = (id: string, type: 'like' | 'dislike' | 'save') => {
+  const handleFeedback = async (id: string, type: 'like' | 'dislike' | 'save') => {
     const item = recommendations.find(r => r.id === id);
-    if (item && type === 'like') {
+    if (!item) return;
+
+    if (type === 'like') {
       setHistory(prev => [...prev, item.title].slice(-5));
+    }
+
+    if (type === 'save' && user) {
+      // Check if already bookmarked
+      if (!user.bookmarks.some(b => b.id === id)) {
+        const newBookmarks = [item, ...user.bookmarks];
+        const updatedUser = { ...user, bookmarks: newBookmarks };
+        setUser(updatedUser);
+
+        // Sync to backend asynchronously
+        fetch('/api/user/update', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: user.email,
+            bio: user.bio,
+            profile_photo: user.profile_photo,
+            preferences: user.preferences,
+            bookmarks: newBookmarks
+          }),
+        }).catch(err => console.error("Failed to sync bookmark to server", err));
+      }
     }
     console.log(`Feedback for ${id}: ${type}`);
   };
@@ -411,13 +446,19 @@ export default function App() {
     }
   };
 
-  const handleUpdateProfile = async (newBio: string, newPrefs: any) => {
+  const handleUpdateProfile = async (newBio: string, newPhoto: string, newPrefs: any) => {
     if (!user) return;
     try {
       const response = await fetch('/api/user/update', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: user.email, bio: newBio, preferences: newPrefs }),
+        body: JSON.stringify({
+          email: user.email,
+          bio: newBio,
+          profile_photo: newPhoto,
+          preferences: newPrefs,
+          bookmarks: user.bookmarks
+        }),
       });
       const data = await response.json();
       if (response.ok) {
@@ -609,7 +650,9 @@ export default function App() {
                 name: 'Guest User',
                 email: 'guest@example.com',
                 bio: 'Exploring Electa as a guest.',
-                preferences: { genres: [], dietary: [], interests: [] }
+                profile_photo: '',
+                preferences: { genres: [], dietary: [], interests: [] },
+                bookmarks: []
               })}
               className="w-full mt-4 py-3 bg-zinc-50 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-2xl text-sm font-bold hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-all border border-zinc-100 dark:border-zinc-700"
             >
@@ -693,9 +736,13 @@ export default function App() {
               </button>
               <button
                 onClick={() => setIsProfileOpen(true)}
-                className="w-10 h-10 bg-zinc-100 dark:bg-zinc-800 rounded-full flex items-center justify-center text-zinc-600 dark:text-zinc-300 font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+                className="w-10 h-10 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden flex items-center justify-center text-zinc-600 dark:text-zinc-300 font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors border border-zinc-200 dark:border-zinc-700"
               >
-                {user.name[0]}
+                {user.profile_photo ? (
+                  <img src={user.profile_photo} alt={user.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                ) : (
+                  user.name[0].toUpperCase()
+                )}
               </button>
               <button onClick={() => setUser(null)} className="text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors">
                 <LogOut size={20} />
@@ -908,15 +955,23 @@ export default function App() {
       <Modal isOpen={isProfileOpen} onClose={() => { setIsProfileOpen(false); setIsEditingProfile(false); }}>
         {user && (
           <div className="flex flex-col bg-white dark:bg-zinc-900 min-h-full">
-            <div className="h-32 bg-zinc-900 dark:bg-zinc-800 flex-shrink-0" />
+            <div className="h-32 bg-zinc-900 dark:bg-zinc-800 flex-shrink-0 relative overflow-hidden">
+              {user.profile_photo && (
+                <img src={user.profile_photo} alt="Cover" className="w-full h-full object-cover opacity-30 blur-sm" referrerPolicy="no-referrer" />
+              )}
+            </div>
             <div className="px-8 pb-8 -mt-12">
               <div className="flex items-end justify-between mb-8">
-                <div className="w-24 h-24 bg-white dark:bg-zinc-900 rounded-3xl border-4 border-white dark:border-zinc-900 shadow-xl flex items-center justify-center text-3xl font-bold text-zinc-900 dark:text-white">
-                  {user.name[0]}
+                <div className="w-24 h-24 bg-white dark:bg-zinc-900 rounded-3xl border-4 border-white dark:border-zinc-900 shadow-xl overflow-hidden flex items-center justify-center text-3xl font-bold text-zinc-900 dark:text-white relative bg-zinc-100 dark:bg-zinc-800">
+                  {user.profile_photo ? (
+                    <img src={user.profile_photo} alt={user.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                  ) : (
+                    user.name[0].toUpperCase()
+                  )}
                 </div>
                 <button
                   onClick={() => setIsEditingProfile(!isEditingProfile)}
-                  className="px-6 py-2 border border-zinc-100 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-xl text-sm font-bold hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-all dark:text-white"
+                  className="px-6 py-2 border border-zinc-100 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-xl text-sm font-bold hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-all dark:text-white shadow-sm"
                 >
                   {isEditingProfile ? 'Cancel' : 'Edit Profile'}
                 </button>
@@ -924,6 +979,16 @@ export default function App() {
 
               {isEditingProfile ? (
                 <div className="space-y-6">
+                  <div>
+                    <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-2 block">Profile Photo URL</label>
+                    <input
+                      type="url"
+                      value={editForm.profile_photo}
+                      onChange={(e) => setEditForm({ ...editForm, profile_photo: e.target.value })}
+                      placeholder="https://example.com/avatar.jpg"
+                      className="w-full p-4 bg-zinc-50 dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 rounded-2xl focus:outline-none focus:ring-2 focus:ring-zinc-900/10 dark:focus:ring-white/10 transition-all text-sm dark:text-white"
+                    />
+                  </div>
                   <div>
                     <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-2 block">Bio</label>
                     <textarea
@@ -933,14 +998,64 @@ export default function App() {
                       rows={3}
                     />
                   </div>
+
+                  {/* Preferences Editor */}
+                  <div className="space-y-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
+                    <h4 className="text-sm font-bold text-zinc-900 dark:text-white">Edit Preferences</h4>
+
+                    {(['genres', 'dietary', 'interests'] as const).map(prefType => (
+                      <div key={prefType} className="bg-zinc-50 dark:bg-zinc-800 p-4 rounded-2xl border border-zinc-100 dark:border-zinc-700">
+                        <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-3 block">{prefType}</label>
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          {editForm.preferences[prefType].map(tag => (
+                            <span key={tag} className="px-3 py-1 bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-lg text-xs font-medium flex items-center gap-1 group">
+                              {tag}
+                              <button
+                                onClick={() => setEditForm(prev => ({
+                                  ...prev,
+                                  preferences: { ...prev.preferences, [prefType]: prev.preferences[prefType].filter(t => t !== tag) }
+                                }))}
+                                className="opacity-50 hover:opacity-100 hover:text-rose-500 transition-colors"
+                              >
+                                <X size={12} />
+                              </button>
+                            </span>
+                          ))}
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <input
+                            type="text"
+                            value={tagInputs[prefType]}
+                            onChange={e => setTagInputs(prev => ({ ...prev, [prefType]: e.target.value }))}
+                            onKeyDown={e => {
+                              if (e.key === 'Enter' && tagInputs[prefType].trim()) {
+                                e.preventDefault();
+                                const newTag = tagInputs[prefType].trim();
+                                if (!editForm.preferences[prefType].includes(newTag)) {
+                                  setEditForm(prev => ({
+                                    ...prev,
+                                    preferences: { ...prev.preferences, [prefType]: [...prev.preferences[prefType], newTag] }
+                                  }));
+                                }
+                                setTagInputs(prev => ({ ...prev, [prefType]: '' }));
+                              }
+                            }}
+                            placeholder={`Add ${prefType}... (Press Enter)`}
+                            className="flex-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-600 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-zinc-400 dark:text-white"
+                          />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+
                   <button
                     onClick={() => {
-                      handleUpdateProfile(editForm.bio, editForm.preferences);
+                      handleUpdateProfile(editForm.bio, editForm.profile_photo, editForm.preferences);
                       setIsEditingProfile(false);
                     }}
-                    className="w-full py-4 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl font-bold hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-all"
+                    className="w-full mt-6 py-4 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl font-bold hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-all shadow-lg"
                   >
-                    Save Changes
+                    Save Profile
                   </button>
                 </div>
               ) : (
@@ -960,23 +1075,31 @@ export default function App() {
                         <div>
                           <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase mb-2">Genres</p>
                           <div className="flex flex-wrap gap-2">
-                            {user.preferences.genres.map(g => (
+                            {user.preferences.genres.length > 0 ? user.preferences.genres.map(g => (
                               <span key={g} className="px-3 py-1 bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 rounded-lg text-xs font-medium border border-rose-100 dark:border-rose-900/30">
                                 {g}
                               </span>
-                            ))}
-                            <button className="px-3 py-1 border border-dashed border-zinc-200 dark:border-zinc-700 rounded-lg text-xs text-zinc-400 dark:text-zinc-500 hover:border-zinc-400 dark:hover:border-zinc-600 transition-colors">+ Add</button>
+                            )) : <span className="text-xs text-zinc-400 italic">No genres added.</span>}
                           </div>
                         </div>
                         <div>
                           <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase mb-2">Dietary</p>
                           <div className="flex flex-wrap gap-2">
-                            {user.preferences.dietary.map(d => (
+                            {user.preferences.dietary.length > 0 ? user.preferences.dietary.map(d => (
                               <span key={d} className="px-3 py-1 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-lg text-xs font-medium border border-emerald-100 dark:border-emerald-900/30">
                                 {d}
                               </span>
-                            ))}
-                            <button className="px-3 py-1 border border-dashed border-zinc-200 dark:border-zinc-700 rounded-lg text-xs text-zinc-400 dark:text-zinc-500 hover:border-zinc-400 dark:hover:border-zinc-600 transition-colors">+ Add</button>
+                            )) : <span className="text-xs text-zinc-400 italic">No dietary preferences added.</span>}
+                          </div>
+                        </div>
+                        <div>
+                          <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase mb-2">Interests</p>
+                          <div className="flex flex-wrap gap-2">
+                            {user.preferences.interests.length > 0 ? user.preferences.interests.map(i => (
+                              <span key={i} className="px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg text-xs font-medium border border-blue-100 dark:border-blue-900/30">
+                                {i}
+                              </span>
+                            )) : <span className="text-xs text-zinc-400 italic">No interests added.</span>}
                           </div>
                         </div>
                       </div>
@@ -984,11 +1107,40 @@ export default function App() {
 
                     <section>
                       <h4 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-4 flex items-center gap-2">
-                        <Bookmark size={14} /> Saved History
+                        <Bookmark size={14} /> Saved Bookmarks
                       </h4>
-                      <div className="p-4 bg-zinc-50 dark:bg-zinc-800 rounded-2xl border border-zinc-100 dark:border-zinc-700 text-center">
-                        <p className="text-xs text-zinc-400 dark:text-zinc-500">You have {history.length} items in your recent history.</p>
-                      </div>
+                      {user.bookmarks && user.bookmarks.length > 0 ? (
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                          {user.bookmarks.map(rec => (
+                            <div key={rec.id} className="group relative flex gap-3 p-3 bg-zinc-50 dark:bg-zinc-800 rounded-2xl border border-zinc-100 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-500 transition-all cursor-pointer" onClick={() => setSelectedRec(rec)}>
+                              <div className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-zinc-200 dark:bg-zinc-900">
+                                <img src={rec.imageUrl} alt={rec.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                              </div>
+                              <div className="flex flex-col justify-center overflow-hidden">
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-1">{rec.category}</span>
+                                <h5 className="font-bold text-sm text-zinc-900 dark:text-white truncate">{rec.title}</h5>
+                              </div>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const newBookmarks = user.bookmarks.filter(b => b.id !== rec.id);
+                                  setUser({ ...user, bookmarks: newBookmarks });
+                                  handleUpdateProfile(user.bio, user.profile_photo || '', user.preferences); // sync deletion
+                                }}
+                                className="absolute top-2 right-2 p-1.5 bg-white dark:bg-zinc-700 rounded-full text-zinc-400 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all shadow-sm"
+                              >
+                                <X size={12} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <div className="p-6 bg-zinc-50 dark:bg-zinc-800 rounded-2xl border border-zinc-100 dark:border-zinc-700 text-center">
+                          <Bookmark size={24} className="mx-auto text-zinc-300 dark:text-zinc-600 mb-2" />
+                          <p className="text-sm font-bold text-zinc-500 dark:text-zinc-400">No saved bookmarks yet</p>
+                          <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">Click the bookmark icon on any recommendation to save it here.</p>
+                        </div>
+                      )}
                     </section>
                   </div>
                 </>

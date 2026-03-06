@@ -28,6 +28,18 @@ db.exec(`
   )
 `);
 
+// Defensive schema additions for new features
+try {
+  db.exec(`ALTER TABLE users ADD COLUMN profile_photo TEXT DEFAULT '';`);
+} catch (err: any) {
+  // Column likely already exists
+}
+try {
+  db.exec(`ALTER TABLE users ADD COLUMN bookmarks TEXT DEFAULT '[]';`);
+} catch (err: any) {
+  // Column likely already exists
+}
+
 async function startServer() {
   const app = express();
   const PORT = 3000;
@@ -56,7 +68,9 @@ async function startServer() {
         email,
         name,
         bio: '',
-        preferences: { genres: [], dietary: [], interests: [] }
+        profile_photo: '',
+        preferences: { genres: [], dietary: [], interests: [] },
+        bookmarks: []
       };
 
       res.json({ user });
@@ -86,7 +100,9 @@ async function startServer() {
         email: userRecord.email,
         name: userRecord.name,
         bio: userRecord.bio,
-        preferences: JSON.parse(userRecord.preferences)
+        profile_photo: userRecord.profile_photo || '',
+        preferences: JSON.parse(userRecord.preferences),
+        bookmarks: JSON.parse(userRecord.bookmarks || '[]')
       };
 
       res.json({ user });
@@ -96,14 +112,20 @@ async function startServer() {
   });
 
   app.post('/api/user/update', (req, res) => {
-    const { email, bio, preferences } = req.body;
+    const { email, bio, profile_photo, preferences, bookmarks } = req.body;
     if (!email) {
       return res.status(400).json({ error: "Email is required" });
     }
 
     try {
-      const stmt = db.prepare('UPDATE users SET bio = ?, preferences = ? WHERE email = ?');
-      stmt.run(bio || '', JSON.stringify(preferences || { genres: [], dietary: [], interests: [] }), email);
+      const stmt = db.prepare('UPDATE users SET bio = ?, profile_photo = ?, preferences = ?, bookmarks = ? WHERE email = ?');
+      stmt.run(
+        bio || '',
+        profile_photo || '',
+        JSON.stringify(preferences || { genres: [], dietary: [], interests: [] }),
+        JSON.stringify(bookmarks || []),
+        email
+      );
 
       const userRecord: any = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
       if (!userRecord) {
@@ -114,7 +136,9 @@ async function startServer() {
         email: userRecord.email,
         name: userRecord.name,
         bio: userRecord.bio,
-        preferences: JSON.parse(userRecord.preferences)
+        profile_photo: userRecord.profile_photo || '',
+        preferences: JSON.parse(userRecord.preferences),
+        bookmarks: JSON.parse(userRecord.bookmarks || '[]')
       };
 
       res.json({ user });
@@ -171,8 +195,8 @@ async function startServer() {
 
       let userRecord: any = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
       if (!userRecord) {
-        const stmt = db.prepare('INSERT INTO users (email, password, name, bio) VALUES (?, ?, ?, ?)');
-        stmt.run(email, 'oauth-user', name || 'Google User', 'Logged in with Google.');
+        const stmt = db.prepare('INSERT INTO users (email, password, name, bio, profile_photo) VALUES (?, ?, ?, ?, ?)');
+        stmt.run(email, 'oauth-user', name || 'Google User', 'Logged in with Google.', userRes.data.picture || '');
         userRecord = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
       }
 
@@ -180,7 +204,9 @@ async function startServer() {
         email: userRecord.email,
         name: userRecord.name,
         bio: userRecord.bio,
-        preferences: JSON.parse(userRecord.preferences)
+        profile_photo: userRecord.profile_photo || '',
+        preferences: JSON.parse(userRecord.preferences),
+        bookmarks: JSON.parse(userRecord.bookmarks || '[]')
       };
 
       res.send(`
@@ -243,8 +269,8 @@ async function startServer() {
 
       let userRecord: any = db.prepare('SELECT * FROM users WHERE email = ?').get(primaryEmail);
       if (!userRecord) {
-        const stmt = db.prepare('INSERT INTO users (email, password, name, bio) VALUES (?, ?, ?, ?)');
-        stmt.run(primaryEmail, 'oauth-user', name, 'Logged in with GitHub.');
+        const stmt = db.prepare('INSERT INTO users (email, password, name, bio, profile_photo) VALUES (?, ?, ?, ?, ?)');
+        stmt.run(primaryEmail, 'oauth-user', name, 'Logged in with GitHub.', userRes.data.avatar_url || '');
         userRecord = db.prepare('SELECT * FROM users WHERE email = ?').get(primaryEmail);
       }
 
@@ -252,7 +278,9 @@ async function startServer() {
         email: userRecord.email,
         name: userRecord.name,
         bio: userRecord.bio,
-        preferences: JSON.parse(userRecord.preferences)
+        profile_photo: userRecord.profile_photo || '',
+        preferences: JSON.parse(userRecord.preferences),
+        bookmarks: JSON.parse(userRecord.bookmarks || '[]')
       };
 
       res.send(`
