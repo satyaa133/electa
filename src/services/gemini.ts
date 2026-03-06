@@ -38,6 +38,12 @@ export async function getRecommendations(
     User coordinates: ${location || "major city"}.
     If category='restaurants', recommend ONLY REAL places AT THIS LOCATION. 
     
+    CRITICAL IMAGE INSTRUCTION:
+    You MUST provide a REAL, WORKING direct image URL for each item in the "imageUrl" field. 
+    The image must be the exact official item (e.g. the official movie poster, exact book cover, or exact photograph of the place) exactly as it appears on Google Images.
+    - Rely on official Wikipedia/Wikimedia Commons image URLs, TMDB/IMDB image URLs, or other direct CDN links to public images.
+    - DO NOT EVER use placeholder URLs or random image generators for "imageUrl". If you know the item, you know its image URL.
+
     Format: Raw JSON array of exactly 12 objects. NO markdown.
     [
       {
@@ -92,14 +98,12 @@ export async function getRecommendations(
   }
 
   return rawRecs.map((rec: any) => {
-    // Extract the imageUrl from the AI's response details
     let finalImageUrl = rec.details?.imageUrl || rec.imageUrl;
 
-    // Only fallback if the AI blatantly failed to provide a real URL despite strict instructions
-    if (!finalImageUrl || finalImageUrl.includes("example.com") || finalImageUrl.includes("placeholder") || !finalImageUrl.startsWith("http")) {
-      console.log("AI failed to provide real image for", rec.title, "- using deterministic fallback");
-      const seed = encodeURIComponent(`${rec.title} ${rec.category}`);
-      finalImageUrl = `https://picsum.photos/seed/${seed}/800/600`;
+    if (!finalImageUrl || finalImageUrl.includes("example.com") || finalImageUrl.includes("placeholder")) {
+      console.log("AI failed to provide real image for", rec.title, "- falling back to generated image");
+      // Use an AI image generation endpoint to at least generate an image of the specific target
+      finalImageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(rec.title + ' ' + rec.category + ' official photo')}`;
     }
 
     return {
