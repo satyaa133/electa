@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Smile,
   Frown,
@@ -30,7 +30,8 @@ import {
   Chrome,
   User as UserIcon,
   Settings,
-  CheckCircle2
+  CheckCircle2,
+  Upload
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
@@ -230,6 +231,8 @@ export default function App() {
   const [selectedRec, setSelectedRec] = useState<Recommendation | null>(null);
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
   const [editForm, setEditForm] = useState({
     bio: '',
     profile_photo: '',
@@ -249,6 +252,17 @@ export default function App() {
       });
     }
   }, [user]);
+
+  const handleProfilePhotoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setEditForm(prev => ({ ...prev, profile_photo: reader.result as string }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
 
   const fetchIPLocation = async () => {
     try {
@@ -962,8 +976,19 @@ export default function App() {
             </div>
             <div className="px-8 pb-8 -mt-12">
               <div className="flex items-end justify-between mb-8">
-                <div className="w-24 h-24 bg-white dark:bg-zinc-900 rounded-3xl border-4 border-white dark:border-zinc-900 shadow-xl overflow-hidden flex items-center justify-center text-3xl font-bold text-zinc-900 dark:text-white relative bg-zinc-100 dark:bg-zinc-800">
-                  {user.profile_photo ? (
+                <div
+                  className={`w-24 h-24 bg-white dark:bg-zinc-900 rounded-3xl border-4 border-white dark:border-zinc-900 shadow-xl overflow-hidden flex items-center justify-center text-3xl font-bold text-zinc-900 dark:text-white relative bg-zinc-100 dark:bg-zinc-800 ${isEditingProfile ? 'cursor-pointer group' : ''}`}
+                  onClick={() => isEditingProfile && fileInputRef.current?.click()}
+                >
+                  {isEditingProfile && (
+                    <div className="absolute inset-0 bg-black/50 z-10 flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
+                      <Upload size={20} className="mb-1" />
+                      <span className="text-[10px] font-bold uppercase tracking-wide">Upload</span>
+                    </div>
+                  )}
+                  {editForm.profile_photo && isEditingProfile ? (
+                    <img src={editForm.profile_photo} alt={user.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                  ) : user.profile_photo && !isEditingProfile ? (
                     <img src={user.profile_photo} alt={user.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
                   ) : (
                     user.name[0].toUpperCase()
@@ -979,16 +1004,13 @@ export default function App() {
 
               {isEditingProfile ? (
                 <div className="space-y-6">
-                  <div>
-                    <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-2 block">Profile Photo URL</label>
-                    <input
-                      type="url"
-                      value={editForm.profile_photo}
-                      onChange={(e) => setEditForm({ ...editForm, profile_photo: e.target.value })}
-                      placeholder="https://example.com/avatar.jpg"
-                      className="w-full p-4 bg-zinc-50 dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 rounded-2xl focus:outline-none focus:ring-2 focus:ring-zinc-900/10 dark:focus:ring-white/10 transition-all text-sm dark:text-white"
-                    />
-                  </div>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    className="hidden"
+                    accept="image/*"
+                    onChange={handleProfilePhotoUpload}
+                  />
                   <div>
                     <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-2 block">Bio</label>
                     <textarea
