@@ -861,21 +861,38 @@ export default function App() {
                 <p className="font-mono text-xs uppercase tracking-widest">Curating tailored gems...</p>
               </motion.div>
             ) : mood ? (
-              apiError === "Limit reached." ? (
-                <motion.div
-                  key="error"
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="flex flex-col items-center justify-center py-20 text-center"
-                >
-                  <div className="w-20 h-20 bg-rose-50 dark:bg-rose-900/30 rounded-full flex items-center justify-center text-rose-500 mb-6 relative">
-                    <Hourglass size={32} className="relative z-10 animate-[spin_3s_ease-in-out_infinite]" />
-                  </div>
-                  <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">Cool Down Active</h3>
-                  <p className="text-zinc-500 dark:text-zinc-400 font-mono text-xs mt-1">
-                    Try after some hours
-                  </p>
-                </motion.div>
+              apiError ? (
+                apiError === "Limit reached." ? (
+                  <motion.div
+                    key="error-limit"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="flex flex-col items-center justify-center py-20 text-center"
+                  >
+                    <div className="w-20 h-20 bg-rose-50 dark:bg-rose-900/30 rounded-full flex items-center justify-center text-rose-500 mb-6 relative">
+                      <Hourglass size={32} className="relative z-10 animate-[spin_3s_ease-in-out_infinite]" />
+                    </div>
+                    <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">Cool Down Active</h3>
+                    <p className="text-zinc-500 dark:text-zinc-400 font-mono text-xs mt-1">
+                      Try after some hours
+                    </p>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="error-generic"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="flex flex-col items-center justify-center py-20 text-center"
+                  >
+                    <div className="w-20 h-20 bg-red-50 dark:bg-red-900/30 rounded-full flex items-center justify-center text-red-500 mb-6 border border-red-200 dark:border-red-800">
+                      <Search size={32} />
+                    </div>
+                    <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">Diagnostic Error</h3>
+                    <p className="text-red-500 font-mono text-sm max-w-md mt-1 p-4 bg-red-50 dark:bg-red-950/50 rounded-lg border border-red-100 dark:border-red-900">
+                      {apiError}
+                    </p>
+                  </motion.div>
+                )
               ) : (
                 <motion.div
                   key="results"
