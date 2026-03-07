@@ -1,6 +1,8 @@
 import { GoogleGenAI, Type } from "@google/genai";
 
-const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
+// We initialize the AI lazily inside the function so that a missing API Key
+// doesn't crash the entire React application on load (blank screen).
+let ai: GoogleGenAI | null = null;
 
 export interface Recommendation {
   id: string;
@@ -25,6 +27,16 @@ export async function getRecommendations(
   history: string[],
   location?: string
 ): Promise<Recommendation[]> {
+  const apiKey = process.env.GEMINI_API_KEY || "";
+
+  if (!apiKey) {
+    throw new Error("GEMINI_API_KEY is missing! Please configure it in your Vercel Environment Variables.");
+  }
+
+  if (!ai) {
+    ai = new GoogleGenAI({ apiKey });
+  }
+
   const prompt = `
     User Mood: ${mood}
     Category: ${category}
