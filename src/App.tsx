@@ -134,6 +134,14 @@ const RecCard = ({ rec, onClick, onFeedback }: { rec: Recommendation, onClick: (
           loading="lazy"
           decoding="async"
           onLoad={() => setImageLoaded(true)}
+          onError={(e) => {
+            const target = e.currentTarget as HTMLImageElement;
+            if (!target.src.includes('pollinations.ai')) {
+              target.src = `https://image.pollinations.ai/prompt/${encodeURIComponent(rec.title + ' ' + rec.category + ' high quality')}`;
+            } else {
+              setImageLoaded(true); // Failsafe to clear loading spinner even if fallback fails
+            }
+          }}
           className={cn(
             "w-full h-full object-cover object-center group-hover:scale-105 transition-all duration-700 will-change-transform",
             imageLoaded ? "opacity-100 scale-100 blur-0" : "opacity-0 scale-110 blur-xl"
@@ -939,6 +947,12 @@ export default function App() {
                 alt={selectedRec.title}
                 className="w-full h-full object-cover"
                 referrerPolicy="no-referrer"
+                onError={(e) => {
+                  const target = e.currentTarget as HTMLImageElement;
+                  if (!target.src.includes('pollinations.ai')) {
+                    target.src = `https://image.pollinations.ai/prompt/${encodeURIComponent(selectedRec.title + ' ' + selectedRec.category + ' high quality')}`;
+                  }
+                }}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
               <div className="absolute bottom-6 left-8 right-8">
