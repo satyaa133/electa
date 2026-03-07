@@ -170,10 +170,20 @@ async function startServer() {
 
   app.get('/api/auth/google/callback', async (req, res) => {
     const code = req.query.code as string;
+    const error = req.query.error as string;
     const state = req.query.state as string;
 
     let origin = '*';
     try { if (state) origin = JSON.parse(Buffer.from(state, 'base64').toString('utf8')).origin; } catch (e) { }
+
+    if (error) {
+      return res.send(`
+        <script>
+          window.opener.postMessage({ type: 'OAUTH_CANCELLED' }, "${origin}");
+          window.close();
+        </script>
+      `);
+    }
 
     const redirectUri = origin === '*' ? `${req.protocol}://${req.get('host')}/api/auth/google/callback` : `${origin}/api/auth/google/callback`;
 
@@ -240,10 +250,20 @@ async function startServer() {
 
   app.get('/api/auth/github/callback', async (req, res) => {
     const code = req.query.code as string;
+    const error = req.query.error as string;
     const state = req.query.state as string;
 
     let origin = '*';
     try { if (state) origin = JSON.parse(Buffer.from(state, 'base64').toString('utf8')).origin; } catch (e) { }
+
+    if (error) {
+      return res.send(`
+        <script>
+          window.opener.postMessage({ type: 'OAUTH_CANCELLED' }, "${origin}");
+          window.close();
+        </script>
+      `);
+    }
 
     try {
       const tokenRes = await axios.post('https://github.com/login/oauth/access_token', {

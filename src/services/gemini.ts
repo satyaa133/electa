@@ -34,14 +34,21 @@ export async function getRecommendations(
 
     Act as a precise recommendation engine. Recommend exactly 12 items in the ${category} category based on mood: ${mood}.
     
+    CRITICAL VARIETY INSTRUCTION:
+    Ensure HIGHLY UNIQUE, less obvious, and varied results for every single request. DO NOT just recommend the most popular or mainstream items. Provide a mix of hidden gems, unexpected concepts, and highly specific niche items. Every time a user asks, give them COMPLETELY DIFFERENT results from the ones before.
+    Random seed to enforce uniqueness: ${Math.random()}
+    
     CRITICAL LOCATION INSTRUCTION: 
     User coordinates: ${location || "major city"}.
     If category='restaurants', recommend ONLY REAL places AT THIS LOCATION. 
     
     CRITICAL IMAGE INSTRUCTION:
     You MUST provide a REAL, WORKING direct image URL for each item in the "imageUrl" field. 
-    The image must be the exact official item (e.g. the official movie poster, exact book cover, or exact photograph of the place) exactly as it appears on Google Images.
-    - Rely on official Wikipedia/Wikimedia Commons image URLs, TMDB/IMDB image URLs, or other direct CDN links to public images.
+    The image must be the exact official item (e.g. the official movie poster, exact book cover, or photograph).
+    - EXTREMELY IMPORTANT FOR PERFORMANCE: You MUST use low-resolution, compressed, or thumbnail size URLs to ensure lightning-fast loading! 
+    - For TMDB/IMDB images, use "w500" or "w300" in the path, NEVER "original".
+    - For Wikipedia/Wikimedia, use the scaled thumbnail URLs (e.g., upload.wikimedia.org/.../thumb/.../300px-...).
+    - DO NOT EVER use massive high-resolution images or placeholder URLs. If you know the item, you know its thumbnail URL.
     - DO NOT EVER use placeholder URLs or random image generators for "imageUrl". If you know the item, you know its image URL.
 
     Format: Raw JSON array of exactly 12 objects. NO markdown.

@@ -31,7 +31,8 @@ import {
   User as UserIcon,
   Settings,
   CheckCircle2,
-  Upload
+  Upload,
+  Hourglass
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
@@ -136,7 +137,6 @@ const RecCard = ({ rec, onClick, onFeedback }: { rec: Recommendation, onClick: (
             imageLoaded ? "opacity-100 blur-0" : "opacity-0 blur-md"
           )}
           referrerPolicy="no-referrer"
-          loading="lazy"
         />
         <div className="absolute top-4 left-4">
           <span className="px-3 py-1 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-sm rounded-full text-[10px] font-bold uppercase tracking-widest text-zinc-900 dark:text-white shadow-sm">
@@ -367,7 +367,7 @@ export default function App() {
     } catch (error: any) {
       console.error("Failed to fetch recommendations", error);
       if (error.message === "RATE_LIMIT") {
-        setApiError("Limit reached. Try again after some time.");
+        setApiError("Limit reached.");
       } else {
         setApiError("An unexpected error occurred while fetching recommendations.");
       }
@@ -382,23 +382,6 @@ export default function App() {
       handleFetchRecommendations();
     }
   }, [mood, category, location, user, history, handleFetchRecommendations]);
-
-  useEffect(() => {
-    if (recommendations.length > 0) {
-      // Preload all incoming images to radically drop layout shift / blank load times
-      recommendations.forEach(rec => {
-        if (!rec.imageUrl) return;
-        const link = document.createElement('link');
-        link.rel = 'preload';
-        link.as = 'image';
-        link.href = rec.imageUrl;
-        // prevent duplicate preload links
-        if (!document.head.querySelector(`link[href="\${rec.imageUrl}"]`)) {
-          document.head.appendChild(link);
-        }
-      });
-    }
-  }, [recommendations]);
 
   const handleFeedback = async (id: string, type: 'like' | 'dislike' | 'save') => {
     const item = recommendations.find(r => r.id === id);
@@ -429,16 +412,29 @@ export default function App() {
         }).catch(err => console.error("Failed to sync bookmark to server", err));
       }
     }
+
     console.log(`Feedback for ${id}: ${type}`);
+    // Auto-refresh recommendations to give the user a fresh flow after interaction
+    if (type !== 'save') {
+      handleFetchRecommendations();
+    }
   };
 
   const [authForm, setAuthForm] = useState({ email: '', password: '', name: '' });
   const [authError, setAuthError] = useState<string | null>(null);
+  const [emailFormError, setEmailFormError] = useState<string | null>(null);
 
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
+    setEmailFormError(null);
     setAuthError(null);
+
+    if (!authForm.email.includes('@')) {
+      setEmailFormError('Invalid Email');
+      return;
+    }
+
+    setIsLoading(true);
     try {
       const endpoint = authMode === 'login' ? '/api/auth/login' : '/api/auth/signup';
       const response = await fetch(endpoint, {
@@ -560,6 +556,9 @@ export default function App() {
       } else if (event.data?.type === 'OAUTH_ERROR') {
         setAuthError(event.data.error);
         setIsLoading(false);
+      } else if (event.data?.type === 'OAUTH_CANCELLED') {
+        setAuthError(null);
+        setIsLoading(false);
       }
     };
 
@@ -601,7 +600,7 @@ export default function App() {
               </p>
             </div>
 
-            <form onSubmit={handleAuth} className="space-y-4">
+            <form onSubmit={handleAuth} className="space-y-4" noValidate>
               {authMode === 'signup' && (
                 <div className="relative">
                   <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" size={18} />
@@ -615,16 +614,29 @@ export default function App() {
                   />
                 </div>
               )}
-              <div className="relative">
-                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" size={18} />
-                <input
-                  type="email"
-                  required
-                  placeholder="Email address"
-                  value={authForm.email}
-                  onChange={(e) => setAuthForm({ ...authForm, email: e.target.value })}
-                  className="w-full pl-12 pr-4 py-4 bg-zinc-50 dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 rounded-2xl focus:outline-none focus:ring-2 focus:ring-zinc-900/10 dark:focus:ring-white/10 transition-all dark:text-white"
-                />
+              <div>
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" size={18} />
+                  <input
+                    type="email"
+                    required
+                    placeholder="Email address"
+                    value={authForm.email}
+                    onChange={(e) => {
+                      setAuthForm({ ...authForm, email: e.target.value });
+                      if (emailFormError) setEmailFormError(null);
+                    }}
+                    className={cn(
+                      "w-full pl-12 pr-4 py-4 bg-zinc-50 dark:bg-zinc-800 border rounded-2xl focus:outline-none transition-all dark:text-white",
+                      emailFormError
+                        ? "border-rose-500 focus:ring-2 focus:ring-rose-500/20"
+                        : "border-zinc-100 dark:border-zinc-700 focus:ring-2 focus:ring-zinc-900/10 dark:focus:ring-white/10"
+                    )}
+                  />
+                </div>
+                {emailFormError && (
+                  <p className="text-rose-500 text-xs mt-1 ml-2">{emailFormError}</p>
+                )}
               </div>
               <div className="relative">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" size={18} />
@@ -846,22 +858,22 @@ export default function App() {
                 className="absolute inset-0 flex flex-col items-center justify-center text-zinc-400 dark:text-zinc-500"
               >
                 <Loader2 size={48} className="animate-spin mb-4 text-zinc-900 dark:text-white" />
-                <p className="font-mono text-xs uppercase tracking-widest">Agent reasoning in progress...</p>
+                <p className="font-mono text-xs uppercase tracking-widest">Curating tailored gems...</p>
               </motion.div>
             ) : mood ? (
-              apiError === "Limit reached. Try again after some time." ? (
+              apiError === "Limit reached." ? (
                 <motion.div
                   key="error"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   className="flex flex-col items-center justify-center py-20 text-center"
                 >
-                  <div className="w-20 h-20 bg-rose-50 dark:bg-rose-900/30 rounded-full flex items-center justify-center text-rose-500 mb-6 border border-rose-100 dark:border-rose-900/50">
-                    <Zap size={40} />
+                  <div className="w-20 h-20 bg-rose-50 dark:bg-rose-900/30 rounded-full flex items-center justify-center text-rose-500 mb-6 relative">
+                    <Hourglass size={32} className="relative z-10 animate-[spin_3s_ease-in-out_infinite]" />
                   </div>
-                  <h3 className="text-xl font-bold text-zinc-900 dark:text-white">Limit Reached</h3>
-                  <p className="text-zinc-500 dark:text-zinc-400 text-sm max-w-sm mx-auto mt-2">
-                    {apiError}
+                  <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">Cool Down Active</h3>
+                  <p className="text-zinc-500 dark:text-zinc-400 font-mono text-xs mt-1">
+                    Try after some hours
                   </p>
                 </motion.div>
               ) : (
@@ -1165,9 +1177,21 @@ export default function App() {
                                   e.stopPropagation();
                                   const newBookmarks = user.bookmarks.filter(b => b.id !== rec.id);
                                   setUser({ ...user, bookmarks: newBookmarks });
-                                  handleUpdateProfile(user.bio, user.profile_photo || '', user.preferences); // sync deletion
+
+                                  // sync deletion directly
+                                  fetch('/api/user/update', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                      email: user.email,
+                                      bio: user.bio,
+                                      profile_photo: user.profile_photo,
+                                      preferences: user.preferences,
+                                      bookmarks: newBookmarks
+                                    }),
+                                  }).catch(err => console.error("Failed to sync bookmark deletion", err));
                                 }}
-                                className="absolute top-2 right-2 p-1.5 bg-white dark:bg-zinc-700 rounded-full text-zinc-400 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all shadow-sm"
+                                className="absolute top-2 right-2 p-1.5 bg-white dark:bg-zinc-700 rounded-full text-zinc-400 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all shadow-sm z-10"
                               >
                                 <X size={12} />
                               </button>
