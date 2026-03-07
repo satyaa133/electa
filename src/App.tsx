@@ -119,26 +119,28 @@ const RecCard = ({ rec, onClick, onFeedback }: { rec: Recommendation, onClick: (
       layout
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      className="bg-white dark:bg-zinc-800 rounded-3xl overflow-hidden border border-zinc-100 dark:border-zinc-700 shadow-sm hover:shadow-xl dark:hover:shadow-2xl dark:hover:shadow-black/30 transition-all group cursor-pointer flex flex-col"
+      className="bg-white dark:bg-zinc-800 rounded-3xl overflow-hidden border border-zinc-100 dark:border-zinc-700 shadow-sm hover:shadow-xl dark:hover:shadow-2xl dark:hover:shadow-black/30 transition-all group cursor-pointer flex flex-col h-full"
       onClick={onClick}
     >
       <div className="relative aspect-[4/3] overflow-hidden bg-zinc-100 dark:bg-zinc-900 rounded-t-3xl">
         {!imageLoaded && (
-          <div className="absolute inset-0 flex items-center justify-center">
+          <div className="absolute inset-0 flex items-center justify-center bg-zinc-100 dark:bg-zinc-900 z-10">
             <Loader2 size={24} className="animate-spin text-zinc-300 dark:text-zinc-700" />
           </div>
         )}
         <img
           src={rec.imageUrl}
           alt={rec.title}
+          loading="lazy"
+          decoding="async"
           onLoad={() => setImageLoaded(true)}
           className={cn(
-            "w-full h-full object-cover object-center group-hover:scale-105 transition-all duration-700",
-            imageLoaded ? "opacity-100 blur-0" : "opacity-0 blur-md"
+            "w-full h-full object-cover object-center group-hover:scale-105 transition-all duration-700 will-change-transform",
+            imageLoaded ? "opacity-100 scale-100 blur-0" : "opacity-0 scale-110 blur-xl"
           )}
           referrerPolicy="no-referrer"
         />
-        <div className="absolute top-4 left-4">
+        <div className="absolute top-4 left-4 z-20">
           <span className="px-3 py-1 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-sm rounded-full text-[10px] font-bold uppercase tracking-widest text-zinc-900 dark:text-white shadow-sm">
             {rec.category}
           </span>

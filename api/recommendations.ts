@@ -48,8 +48,9 @@ export default async function handler(req: any, res: any) {
             CRITICAL LOCATION INSTRUCTION: User coordinates: ${location || "major city"}. If category='restaurants', recommend ONLY REAL places AT THIS LOCATION. 
             
             CRITICAL IMAGE INSTRUCTION: You MUST provide a REAL, WORKING direct image URL for each item. 
-            - Use "w500" or "w300" for TMDB/IMDB imagery.
-            - DO NOT NEVER use massive high-res images or placeholder URLs.
+            - For TMDB/IMDB imagery, YOU MUST use "w200" or "w300" in the URL path. NEVER use "original" or "w500".
+            - For Wikipedia, YOU MUST use the scaled 200px thumbnail URLs.
+            - DO NOT EVER use massive high-res images or placeholder URLs. Small thumbnails only designed for a fast 3-column grid.
 
             Format: Raw JSON array of exactly 12 objects. NO markdown.
             [
