@@ -1,7 +1,5 @@
 # Electa | AI Recommendations
 
-# Electa | AI Recommendations
-
 **Electa** is an intelligent, context-aware web application that delivers highly personalized recommendations based on your current emotional state, real-time location, and unique preferences. Simply click how you're feeling, and let **Gemini 1.5 Flash** curate your perfect matches.
 
 ### Key Features
