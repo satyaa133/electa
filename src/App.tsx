@@ -395,7 +395,7 @@ export default function App() {
 
     if (type === 'save' && user) {
       // Check if already bookmarked
-      if (!user.bookmarks.some(b => b.id === id)) {
+      if (!user.bookmarks.some((b: any) => b.id === id)) {
         const newBookmarks = [item, ...user.bookmarks];
         const updatedUser = { ...user, bookmarks: newBookmarks };
         setUser(updatedUser);
@@ -416,10 +416,7 @@ export default function App() {
     }
 
     console.log(`Feedback for ${id}: ${type}`);
-    // Auto-refresh recommendations to give the user a fresh flow after interaction
-    if (type !== 'save') {
-      handleFetchRecommendations();
-    }
+    // Removed auto-refresh. The grid stays stable until the user explicitly requests new items.
   };
 
   const [authForm, setAuthForm] = useState({ email: '', password: '', name: '' });
