@@ -1003,7 +1003,7 @@ export default function App() {
 
               <div className="flex items-center gap-4 mt-12 pt-8 border-t border-zinc-100 dark:border-zinc-700">
                 <button
-                  onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(selectedRec.title + ' ' + selectedRec.category)}`, '_blank')}
+                  onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(selectedRec.title)}`, '_blank')}
                   className="flex-1 py-4 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl font-bold hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-all flex items-center justify-center gap-2 shadow-lg shadow-zinc-200 dark:shadow-white/10"
                 >
                   Explore Now <ExternalLink size={18} />
