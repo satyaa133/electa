@@ -29,8 +29,9 @@ export async function getRecommendations(
     });
 
     if (!response.ok) {
+      const errText = await response.text();
       if (response.status === 429) throw new Error("RATE_LIMIT");
-      throw new Error(`API error: ${response.status}`);
+      throw new Error(`API ${response.status}: ${errText}`);
     }
 
     const data = await response.json();

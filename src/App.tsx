@@ -369,7 +369,7 @@ export default function App() {
       if (error.message === "RATE_LIMIT") {
         setApiError("Limit reached.");
       } else {
-        setApiError("An unexpected error occurred while fetching recommendations.");
+        setApiError(error.message || "An unexpected error occurred.");
       }
       setRecommendations([]);
     } finally {
