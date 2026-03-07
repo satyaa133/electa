@@ -7,10 +7,25 @@ import { GoogleGenAI } from "@google/genai";
 
 dotenv.config({ path: '.env.local' });
 
-const sql = neon(process.env.DATABASE_URL || process.env.POSTGRES_URL || '');
+// Lazily initialize the Neon DB connection to prevent the Vercel 
+// Serverless function from synchronously crashing on cold-boot if keys are missing.
+const sql = (strings: TemplateStringsArray, ...values: any[]) => {
+    const url = process.env.DATABASE_URL || process.env.POSTGRES_URL;
+    if (!url) throw new Error("Neon Database URL missing from Vercel Environment Variables.");
+    return neon(url)(strings, ...values);
+};
 
 const app = express();
-app.use(express.json({ limit: '50mb' }));
+
+// Vercel Serverless Functions consume the request stream and populate req.body natively.
+// If express.json() fires after the stream is consumed, the app hangs indefinitely.
+app.use((req, res, next) => {
+    if (req.body) {
+        next();
+    } else {
+        express.json({ limit: '50mb' })(req, res, next);
+    }
+});
 
 // Database initialization
 async function initDB() {
