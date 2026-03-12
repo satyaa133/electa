@@ -87,15 +87,31 @@ export default async function handler(req: any, res: any) {
         if (!text) return res.status(500).json({ error: "AI returned empty response" });
 
         let rawRecs = [];
+        const cleanText = text.replace(/```json|```/g, "").trim();
+
         try {
-            const match = text.match(/\[\s*\{[\s\S]*\}\s*\]/);
-            if (match) {
-                rawRecs = JSON.parse(match[0]);
-            } else {
-                return res.status(500).json({ error: "AI returned malformed JSON" });
-            }
+            // Attempt 1: Direct parse
+            const parsed = JSON.parse(cleanText);
+            rawRecs = Array.isArray(parsed) ? parsed : (parsed.recommendations || []);
         } catch (e) {
-            return res.status(500).json({ error: "AI returned unparseable JSON" });
+            // Attempt 2: Extract array with regex
+            const match = cleanText.match(/\[\s*\{[\s\S]*\}\s*\]/);
+            if (match) {
+                try {
+                    rawRecs = JSON.parse(match[0]);
+                } catch (e2) {
+                    console.error("Failed to parse matched JSON segment:", e2);
+                }
+            }
+        }
+
+        if (!rawRecs || rawRecs.length === 0) {
+            console.error("AI response failed to parse into recommendations. Raw text snippet:", text.substring(0, 200));
+            return res.status(500).json({
+                error: "AI returned malformed or empty recommendations",
+                debug_hint: "Check server logs for the raw AI response.",
+                raw_snippet: text.substring(0, 100)
+            });
         }
 
         const enrichedRecs = await Promise.all(rawRecs.map(async (rec: any) => {
