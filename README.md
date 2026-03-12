@@ -1,6 +1,6 @@
 # Electa | AI Recommendations
 
-**Electa** is an intelligent, context-aware web application that delivers highly personalized recommendations based on your current emotional state, real-time location, and unique preferences. Powered by **Gemini 1.5 Flash 8B**, it's optimized for sub-second responses and snappy interaction.
+**Electa** is an intelligent, context-aware web application that delivers highly personalized recommendations based on your current emotional state, real-time location, and unique preferences. Powered by **Gemini 1.5 Flash**, it's optimized for sub-second responses and snappy interaction.
 
 ### Key Features
 *   **Mood-Driven UI**: Select your vibe (Happy, Stressed, Adventurous, etc.) for instant hyper-relevant suggestions.
@@ -14,5 +14,5 @@
 ### Technical Architecture
 1.  **Frontend**: React 19, Vite, TypeScript, Framer Motion, and Tailwind CSS.
 2.  **API Layer**: Vercel Serverless Functions (Node.js/Express) with `@google/genai` integration.
-3.  **Model**: Gemini 1.5 Flash 8B (Latency Optimized).
+3.  **Model**: Gemini 1.5 Flash (Latency Optimized).
 4.  **Imagery**: Wikipedia API, TMDB, and Pollinations.ai.
