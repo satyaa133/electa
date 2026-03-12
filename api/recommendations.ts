@@ -1,4 +1,5 @@
 import { GoogleGenAI } from "@google/genai";
+import axios from "axios";
 
 export default async function handler(req: any, res: any) {
     // Enable CORS
@@ -93,13 +94,30 @@ export default async function handler(req: any, res: any) {
             return res.status(500).json({ error: "AI returned unparseable JSON" });
         }
 
-        const enrichedRecs = rawRecs.map((rec: any) => {
+        const enrichedRecs = await Promise.all(rawRecs.map(async (rec: any) => {
             let finalImageUrl = rec.details?.imageUrl || rec.imageUrl;
+
+            // If the AI didn't provide a URL, or hallucinated a fake placeholder,
+            // query Wikipedia's public API to get the EXACT real image for the item.
             if (!finalImageUrl || finalImageUrl.includes("example.com") || finalImageUrl.includes("placeholder")) {
-                finalImageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(rec.title + ' ' + rec.category + ' official photo')}`;
+                try {
+                    const wikiRes = await axios.get(`https://en.wikipedia.org/w/api.php?action=query&prop=pageimages&format=json&piprop=thumbnail&pithumbsize=400&titles=${encodeURIComponent(rec.title)}`);
+                    const pages = wikiRes.data.query?.pages;
+                    if (pages) {
+                        const pageData = Object.values(pages)[0] as any;
+                        if (pageData && pageData.thumbnail && pageData.thumbnail.source) {
+                            finalImageUrl = pageData.thumbnail.source;
+                        } else {
+                            // Absolute last resort if Wikipedia has no image for this specific title
+                            finalImageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(rec.title + ' ' + rec.category + ' high quality')}`;
+                        }
+                    }
+                } catch (e) {
+                    finalImageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(rec.title + ' ' + rec.category + ' high quality')}`;
+                }
             }
             return { ...rec, imageUrl: finalImageUrl };
-        });
+        }));
 
         return res.status(200).json({ recommendations: enrichedRecs });
 
