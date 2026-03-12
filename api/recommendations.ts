@@ -130,6 +130,9 @@ export default async function handler(req: any, res: any) {
         if (error.status === 429) {
             return res.status(429).json({ error: "RATE_LIMIT" });
         }
-        return res.status(500).json({ error: error.message || "Failed to generate recommendations" });
+        return res.status(500).json({
+            error: error.message || "Failed to generate recommendations",
+            details: error.toString()
+        });
     }
 }
