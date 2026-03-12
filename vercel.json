@@ -5,8 +5,12 @@
     "framework": "vite",
     "rewrites": [
         {
-            "source": "/api/(.*)",
-            "destination": "/api"
+            "source": "/api/auth/(.*)",
+            "destination": "/api/index.ts"
+        },
+        {
+            "source": "/api/user/(.*)",
+            "destination": "/api/index.ts"
         },
         {
             "source": "/(.*)",
