@@ -123,7 +123,7 @@ export default async function handler(req: any, res: any) {
             return { ...rec, imageUrl: finalImageUrl };
         }));
 
-        return res.status(200).json({ recommendations: enrichedRecs });
+        return res.status(200).json({ recommendations: enrichedRecs, version: "v3-stable-flash" });
 
     } catch (error: any) {
         console.error("Gemini API error:", error);
