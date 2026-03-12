@@ -5,6 +5,10 @@
     "framework": "vite",
     "rewrites": [
         {
+            "source": "/api/recommendations",
+            "destination": "/api/recommendations.ts"
+        },
+        {
             "source": "/api/auth/(.*)",
             "destination": "/api/index.ts"
         },
