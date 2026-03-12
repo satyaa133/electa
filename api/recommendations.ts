@@ -70,9 +70,9 @@ export default async function handler(req: any, res: any) {
             ]
         `;
 
-        console.log("Calling Gemini API with model: gemini-1.5-flash");
+        console.log("Calling Gemini API with model: gemini-2.5-flash");
         const response = await ai.models.generateContent({
-            model: "gemini-1.5-flash",
+            model: "gemini-2.5-flash",
             contents: prompt,
             config: {
                 responseMimeType: "application/json",
@@ -123,7 +123,7 @@ export default async function handler(req: any, res: any) {
             return { ...rec, imageUrl: finalImageUrl };
         }));
 
-        return res.status(200).json({ recommendations: enrichedRecs, version: "v3-stable-flash" });
+        return res.status(200).json({ recommendations: enrichedRecs, version: "v5-gemini-2.5" });
 
     } catch (error: any) {
         console.error("Gemini API error:", error);
