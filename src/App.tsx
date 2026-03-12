@@ -743,9 +743,9 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] dark:bg-zinc-950 text-zinc-900 dark:text-white font-sans">
+    <div className="min-h-screen bg-[#F8F9FA] dark:bg-zinc-950 text-zinc-900 dark:text-white font-sans overflow-x-hidden">
       {/* Header */}
-      <header className="sticky top-0 z-30 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border-b border-zinc-100 dark:border-zinc-800 px-6 py-4">
+      <header className="sticky top-0 z-30 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border-b border-zinc-100 dark:border-zinc-800 px-4 md:px-6 py-4">
         <div className="max-w-7xl mx-auto flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl">
@@ -754,7 +754,7 @@ export default function App() {
             <span className="font-bold text-xl tracking-tight text-zinc-900 dark:text-white">Electa</span>
           </div>
 
-          <div className="flex items-center gap-6">
+          <div className="flex items-center gap-3 md:gap-6">
             {isLocating ? (
               <div className="flex items-center gap-2 text-xs font-bold text-zinc-600 dark:text-zinc-300 bg-zinc-50 dark:bg-zinc-800 px-3 py-1.5 rounded-full border border-zinc-100 dark:border-zinc-700">
                 <Loader2 size={12} className="animate-spin" /> Locating...
@@ -767,7 +767,7 @@ export default function App() {
                   title="Click to set location manually"
                 >
                   <MapPin size={12} className={cn("transition-colors", location && !location.includes("unavailable") ? "text-rose-500" : "text-zinc-400 dark:text-zinc-500")} />
-                  <span>{location || "Set Location"}</span>
+                  <span className="hidden sm:inline truncate max-w-[100px] md:max-w-none">{location || "Set Location"}</span>
                 </button>
                 <button
                   onClick={requestLocation}
@@ -778,7 +778,7 @@ export default function App() {
                 </button>
               </div>
             )}
-            <div className="flex items-center gap-3 pl-6 border-l border-zinc-100 dark:border-zinc-800">
+            <div className="flex items-center gap-2 md:gap-3 pl-3 md:pl-6 border-l border-zinc-100 dark:border-zinc-800">
               <button
                 onClick={toggleTheme}
                 className="p-2 rounded-full text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
@@ -807,12 +807,12 @@ export default function App() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-6 py-12">
+      <main className="max-w-7xl mx-auto px-4 md:px-6 py-8 md:py-12">
         {/* Mood Section */}
         <section className="mb-16">
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h2 className="text-3xl font-bold text-zinc-900 dark:text-white tracking-tight mb-2">How are you feeling?</h2>
+              <h2 className="text-2xl md:text-3xl font-bold text-zinc-900 dark:text-white tracking-tight mb-2">How are you feeling?</h2>
               <p className="text-zinc-500 dark:text-zinc-400">Our AI uses your mood and location to suggest recommendations.</p>
             </div>
             <div className="hidden md:flex items-center gap-2 text-[10px] font-mono text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">
@@ -836,7 +836,7 @@ export default function App() {
         {/* Category Filter */}
         <section className="mb-12">
           <div className="mb-4">
-            <h3 className="text-xl font-bold text-zinc-900 dark:text-white">Select a Category</h3>
+            <h3 className="text-lg md:text-xl font-bold text-zinc-900 dark:text-white">Select a Category</h3>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             {CATEGORIES.map((cat) => (
@@ -844,7 +844,7 @@ export default function App() {
                 key={cat.id}
                 onClick={() => setCategory(cat.id)}
                 className={cn(
-                  "flex items-center gap-2 px-6 py-3 rounded-2xl text-sm font-bold transition-all",
+                  "flex items-center gap-2 px-4 py-2 md:px-6 md:py-3 rounded-2xl text-xs md:text-sm font-bold transition-all",
                   category === cat.id
                     ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 shadow-lg shadow-zinc-200 dark:shadow-white/10"
                     : "bg-white dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border border-zinc-100 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600"
@@ -895,11 +895,11 @@ export default function App() {
                     animate={{ opacity: 1 }}
                     className="flex flex-col items-center justify-center py-20 text-center"
                   >
-                    <div className="w-20 h-20 bg-red-50 dark:bg-red-900/30 rounded-full flex items-center justify-center text-red-500 mb-6 border border-red-200 dark:border-red-800">
-                      <Search size={32} />
+                    <div className="w-20 h-20 bg-amber-50 dark:bg-amber-900/30 rounded-full flex items-center justify-center text-amber-500 mb-6 border border-amber-200 dark:border-amber-800">
+                      <Hourglass size={32} className="animate-pulse" />
                     </div>
-                    <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">Diagnostic Error</h3>
-                    <p className="text-red-500 font-mono text-sm max-w-md mt-1 p-4 bg-red-50 dark:bg-red-950/50 rounded-lg border border-red-100 dark:border-red-900">
+                    <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">Something went wrong</h3>
+                    <p className="text-zinc-500 dark:text-zinc-400 font-mono text-sm max-w-md mt-1 p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-lg border border-zinc-100 dark:border-zinc-800">
                       {apiError}
                     </p>
                   </motion.div>
