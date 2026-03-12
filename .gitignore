@@ -12,6 +12,7 @@ node_modules
 dist
 dist-ssr
 *.local
+.vercel
 
 # Editor directories and files
 .vscode/*
@@ -32,12 +33,6 @@ dist-ssr
 .env.production.local
 *.env*
 
-# Database files
-database.db
-*.sqlite
-*.sqlite3
-*.db
-*.db-journal
 
 # Testing and coverage
 coverage

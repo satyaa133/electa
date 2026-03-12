@@ -3,7 +3,6 @@ import bcrypt from "bcryptjs";
 import dotenv from "dotenv";
 import axios from "axios";
 import { neon } from "@neondatabase/serverless";
-import { GoogleGenAI } from "@google/genai";
 
 dotenv.config({ path: '.env.local' });
 

@@ -32,7 +32,8 @@ import {
   Settings,
   CheckCircle2,
   Upload,
-  Hourglass
+  Hourglass,
+  RotateCcw
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
@@ -94,7 +95,7 @@ const Modal = ({ isOpen, onClose, children }: { isOpen: boolean, onClose: () => 
   </AnimatePresence>
 );
 
-const MoodButton = ({ mood, isActive, onClick }: { mood: any, isActive: boolean, onClick: () => void }) => (
+const MoodButton = ({ mood, isActive, onClick }: { mood: any, isActive: boolean, onClick: () => void, key?: any }) => (
   <motion.button
     whileHover={{ scale: 1.05 }}
     whileTap={{ scale: 0.95 }}
@@ -111,7 +112,7 @@ const MoodButton = ({ mood, isActive, onClick }: { mood: any, isActive: boolean,
   </motion.button>
 );
 
-const RecCard = ({ rec, onClick, onFeedback }: { rec: Recommendation, onClick: () => void, onFeedback: (id: string, type: 'like' | 'dislike' | 'save') => void }) => {
+const RecCard = ({ rec, onClick, onFeedback }: { rec: Recommendation, onClick: () => void, onFeedback: (id: string, type: 'like' | 'dislike' | 'save') => void, key?: any }) => {
   const [imageLoaded, setImageLoaded] = useState(false);
 
   return (
@@ -248,6 +249,9 @@ export default function App() {
     profile_photo: '',
     preferences: { genres: [] as string[], dietary: [] as string[], interests: [] as string[] }
   });
+
+  // Caching layer for recommendations
+  const [recCache, setRecCache] = useState<Record<string, Recommendation[]>>({});
   const [tagInputs, setTagInputs] = useState({ genres: '', dietary: '', interests: '' });
 
   // Theme hook - must be at top level before any conditional returns
@@ -362,19 +366,24 @@ export default function App() {
     );
   };
 
-  // Location request is now deferred to the Profile/Menu button click
-  // useEffect(() => {
-  //   requestLocation();
-  // }, []);
 
-  const handleFetchRecommendations = React.useCallback(async () => {
+  const handleFetchRecommendations = React.useCallback(async (forceRefresh = false) => {
     if (!mood) return;
+
+    const cacheKey = `${mood}-${category}`;
+    if (!forceRefresh && recCache[cacheKey]) {
+      setRecommendations(recCache[cacheKey]);
+      setApiError(null);
+      return;
+    }
+
     setIsLoading(true);
     setApiError(null);
     try {
       const prefs = user ? [...user.preferences.genres, ...user.preferences.dietary, ...user.preferences.interests] : [];
       const recs = await getRecommendations(mood, category, prefs, history, location || undefined);
       setRecommendations(recs);
+      setRecCache(prev => ({ ...prev, [cacheKey]: recs }));
     } catch (error: any) {
       console.error("Failed to fetch recommendations", error);
       if (error.message === "RATE_LIMIT") {
@@ -386,11 +395,14 @@ export default function App() {
     } finally {
       setIsLoading(false);
     }
-  }, [mood, category, history, location, user]);
+  }, [mood, category, history, location, user, recCache]);
 
   useEffect(() => {
     if (mood) {
-      handleFetchRecommendations();
+      const timer = setTimeout(() => {
+        handleFetchRecommendations();
+      }, 400); // 400ms debounce
+      return () => clearTimeout(timer);
     }
   }, [mood, category, location, user, history, handleFetchRecommendations]);
 
@@ -815,9 +827,20 @@ export default function App() {
               <h2 className="text-2xl md:text-3xl font-bold text-zinc-900 dark:text-white tracking-tight mb-2">How are you feeling?</h2>
               <p className="text-zinc-500 dark:text-zinc-400">Our AI uses your mood and location to suggest recommendations.</p>
             </div>
-            <div className="hidden md:flex items-center gap-2 text-[10px] font-mono text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">
-              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              Agentic Context Active
+            <div className="flex items-center gap-4">
+              <button
+                onClick={() => handleFetchRecommendations(true)}
+                disabled={isLoading || !mood}
+                className="flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all border border-zinc-100 dark:border-zinc-800"
+                title="Get fresh recommendations"
+              >
+                <RotateCcw size={12} className={cn(isLoading && "animate-spin")} />
+                Refresh
+              </button>
+              <div className="hidden md:flex items-center gap-2 text-[10px] font-mono text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">
+                <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                Agentic Context Active
+              </div>
             </div>
           </div>
 
@@ -1008,7 +1031,7 @@ export default function App() {
                   )}
                 </div>
 
-                {selectedRec.details.address && (
+                {selectedRec.category === 'Food' && selectedRec.details.address && (
                   <section>
                     <h4 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-3">Location</h4>
                     <div className="flex items-center gap-3 text-sm text-zinc-600 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-800 p-4 rounded-2xl border border-zinc-100 dark:border-zinc-700">
