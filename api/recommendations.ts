@@ -70,8 +70,9 @@ export default async function handler(req: any, res: any) {
             ]
         `;
 
+        console.log("Calling Gemini API with model: gemini-1.5-flash-latest");
         const response = await ai.models.generateContent({
-            model: "gemini-1.5-flash",
+            model: "gemini-1.5-flash-latest",
             contents: prompt,
             config: {
                 responseMimeType: "application/json",
