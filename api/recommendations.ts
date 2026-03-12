@@ -43,10 +43,10 @@ export default async function handler(req: any, res: any) {
 
             Act as a precise recommendation engine. Recommend exactly 12 items in the ${category} category based on mood: ${mood}.
             
-            CRITICAL VARIETY INSTRUCTION: Ensure HIGHLY UNIQUE, less obvious, and varied results. DO NOT just recommend the most popular items.
+            CRITICAL VARIETY INSTRUCTION: Ensure HIGHLY UNIQUE, less obvious, and varied results. DO NOT just recommend the most popular items. Even for niche or rare combinations of mood and category, provide thoughtful and relevant results.
             Random seed: ${Math.random()}
             
-            CRITICAL LOCATION INSTRUCTION: User coordinates: ${location || "major city"}. If category='restaurants', recommend ONLY REAL places AT THIS LOCATION. 
+            CRITICAL LOCATION INSTRUCTION: User coordinates: ${location || "major city"}. If category='restaurants', recommend ONLY REAL places AT THIS LOCATION. If location is unknown, assume a relevant major cultural hub for the category.
             
             CRITICAL IMAGE INSTRUCTION: You MUST provide a REAL, WORKING direct image URL for each item. 
             - For TMDB/IMDB imagery, YOU MUST use "w200" or "w300" in the URL path. NEVER use "original" or "w500".

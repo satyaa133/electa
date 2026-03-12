@@ -362,9 +362,10 @@ export default function App() {
     );
   };
 
-  useEffect(() => {
-    requestLocation();
-  }, []);
+  // Location request is now deferred to the Profile/Menu button click
+  // useEffect(() => {
+  //   requestLocation();
+  // }, []);
 
   const handleFetchRecommendations = React.useCallback(async () => {
     if (!mood) return;
@@ -379,7 +380,7 @@ export default function App() {
       if (error.message === "RATE_LIMIT") {
         setApiError("Limit reached.");
       } else {
-        setApiError(error.message || "An unexpected error occurred.");
+        setApiError("Try after few hours");
       }
       setRecommendations([]);
     } finally {
@@ -786,7 +787,10 @@ export default function App() {
                 {isDark ? <Sun size={20} /> : <Moon size={20} />}
               </button>
               <button
-                onClick={() => setIsProfileOpen(true)}
+                onClick={() => {
+                  requestLocation();
+                  setIsProfileOpen(true);
+                }}
                 className="w-10 h-10 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden flex items-center justify-center text-zinc-600 dark:text-zinc-300 font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors border border-zinc-200 dark:border-zinc-700"
               >
                 {user.profile_photo ? (
@@ -817,7 +821,7 @@ export default function App() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
             {MOODS.map((m) => (
               <MoodButton
                 key={m.id}
