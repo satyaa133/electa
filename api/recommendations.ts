@@ -33,7 +33,18 @@ export default async function handler(req: any, res: any) {
     }
 
     try {
-        const ai = new GoogleGenAI({ apiKey });
+        const genAI = new GoogleGenAI(apiKey);
+        const model = genAI.getGenerativeModel({
+            model: "gemini-1.5-flash",
+            generationConfig: {
+                responseMimeType: "application/json",
+                temperature: 0.7,
+                topP: 0.95,
+                topK: 40,
+                maxOutputTokens: 2048,
+            }
+        });
+
         const prompt = `
             User Mood: ${mood}
             Category: ${category}
@@ -70,20 +81,10 @@ export default async function handler(req: any, res: any) {
             ]
         `;
 
-        console.log("Calling Gemini API with model: gemini-1.5-flash-latest");
-        const response = await ai.models.generateContent({
-            model: "gemini-1.5-flash-latest",
-            contents: prompt,
-            config: {
-                responseMimeType: "application/json",
-                temperature: 0.7,
-                topP: 0.95,
-                topK: 40,
-                maxOutputTokens: 2048,
-            },
-        });
-
-        const text = response.text || "";
+        console.log("Calling Gemini API with model: gemini-1.5-flash");
+        const result = await model.generateContent(prompt);
+        const response = result.response;
+        const text = response.text();
         if (!text) return res.status(500).json({ error: "AI returned empty response" });
 
         let rawRecs = [];
