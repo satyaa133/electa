@@ -79,7 +79,11 @@ export default async function handler(req: any, res: any) {
                 temperature: 0.7,
                 topP: 0.95,
                 topK: 40,
-                maxOutputTokens: 2048,
+                maxOutputTokens: 8192,
+                thinkingConfig: {
+                    includeThoughts: false,
+                    thinkingBudget: 0
+                } as any
             },
         });
 
@@ -106,11 +110,10 @@ export default async function handler(req: any, res: any) {
         }
 
         if (!rawRecs || rawRecs.length === 0) {
-            console.error("AI response failed to parse into recommendations. Raw text snippet:", text.substring(0, 200));
+            console.error("AI response failed to parse into recommendations. Full raw text:", text);
             return res.status(500).json({
                 error: "AI returned malformed or empty recommendations",
-                debug_hint: "Check server logs for the raw AI response.",
-                raw_snippet: text.substring(0, 100)
+                debug_hint: "Check server logs for the raw AI response."
             });
         }
 
