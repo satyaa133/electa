@@ -182,6 +182,7 @@ interface UserProfile {
     interests: string[];
   };
   bookmarks: Recommendation[];
+  location?: string;
 }
 
 export default function App() {
@@ -204,7 +205,9 @@ export default function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [history, setHistory] = useState<string[]>([]);
-  const [location, setLocation] = useState<string | null>(null);
+  const [location, setLocation] = useState<string | null>(() => {
+    return user?.location || null;
+  });
   const [isLocating, setIsLocating] = useState(false);
   const [showManualLocation, setShowManualLocation] = useState(false);
   const [manualLocationInput, setManualLocationInput] = useState("");
@@ -247,6 +250,26 @@ export default function App() {
     }
   };
 
+  const handleSetLocation = (newLoc: string | null) => {
+    setLocation(newLoc);
+    if (user && newLoc) {
+      setUser({ ...user, location: newLoc });
+      // Sync to backend
+      fetch('/api/user/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: user.email,
+          bio: user.bio,
+          profile_photo: user.profile_photo,
+          preferences: user.preferences,
+          bookmarks: user.bookmarks,
+          location: newLoc
+        }),
+      }).catch(err => console.error("Failed to sync location to server", err));
+    }
+  };
+
   const fetchIPLocation = async () => {
     try {
       const response = await fetch('https://ipapi.co/json/');
@@ -255,7 +278,7 @@ export default function App() {
       if (data.city) {
         const loc = data.region ? `${data.city}, ${data.region}` : data.city;
         console.log("IP Location found:", loc);
-        setLocation(loc);
+        handleSetLocation(loc);
         return true;
       }
     } catch (err) {
@@ -271,7 +294,7 @@ export default function App() {
     if (!navigator.geolocation) {
       console.log("Geolocation not supported, trying IP fallback...");
       fetchIPLocation().then(success => {
-        if (!success) setLocation("Location not supported");
+        if (!success) handleSetLocation("Location not supported");
         setIsLocating(false);
       });
       return;
@@ -304,7 +327,7 @@ export default function App() {
           if (state) locString += `, ${state}`;
           else if (country) locString += `, ${country}`;
 
-          setLocation(locString);
+          handleSetLocation(locString);
         } catch (err) {
           console.error("Geocoding failed, trying IP fallback...", err);
           const success = await fetchIPLocation();
@@ -320,9 +343,9 @@ export default function App() {
         const success = await fetchIPLocation();
         if (!success) {
           if (err.code === 1) { // PERMISSION_DENIED
-            setLocation("San Francisco, CA");
+            handleSetLocation("San Francisco, CA");
           } else {
-            setLocation("Location unavailable");
+            handleSetLocation("Location unavailable");
           }
         }
         setIsLocating(false);
@@ -434,7 +457,11 @@ export default function App() {
       const data = await response.json();
       if (response.ok) {
         setUser(data.user);
+        // After login, try auto-location, if it fails or completes, check if we need manual
         requestLocation();
+        if (!data.user.location) {
+          setTimeout(() => setShowManualLocation(true), 1500);
+        }
       } else {
         setAuthError(data.error || 'Authentication failed');
       }
@@ -541,6 +568,9 @@ export default function App() {
       if (event.data?.type === 'OAUTH_SUCCESS') {
         setUser(event.data.user);
         requestLocation();
+        if (!event.data.user.location) {
+          setTimeout(() => setShowManualLocation(true), 1500);
+        }
         setIsLoading(false);
       } else if (event.data?.type === 'OAUTH_ERROR') {
         setAuthError(event.data.error);
@@ -748,7 +778,7 @@ export default function App() {
                   title="Click to set location manually"
                 >
                   <MapPin size={12} className={cn("transition-colors", location && !location.includes("unavailable") ? "text-rose-500" : "text-zinc-400 dark:text-zinc-500")} />
-                  <span className="hidden sm:inline truncate max-w-[100px] md:max-w-none">{location || "Set Location"}</span>
+                  <span className="inline truncate max-w-[100px] md:max-w-[150px]">{location || "Set Location"}</span>
                 </button>
                 <button
                   onClick={requestLocation}
@@ -1257,7 +1287,7 @@ export default function App() {
                 className="w-full pl-12 pr-4 py-4 bg-zinc-50 dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 rounded-2xl focus:outline-none focus:ring-2 focus:ring-zinc-900/10 dark:focus:ring-white/10 transition-all text-zinc-900 dark:text-white"
                 onKeyDown={(e) => {
                   if (e.key === 'Enter' && manualLocationInput) {
-                    setLocation(manualLocationInput);
+                    handleSetLocation(manualLocationInput);
                     setShowManualLocation(false);
                   }
                 }}
@@ -1267,7 +1297,7 @@ export default function App() {
               <button
                 onClick={() => {
                   if (manualLocationInput) {
-                    setLocation(manualLocationInput);
+                    handleSetLocation(manualLocationInput);
                     setShowManualLocation(false);
                   }
                 }}
