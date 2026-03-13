@@ -9,6 +9,10 @@
             "destination": "/api/recommendations.ts"
         },
         {
+            "source": "/api/ask",
+            "destination": "/api/ask.ts"
+        },
+        {
             "source": "/api/auth/(.*)",
             "destination": "/api/index.ts"
         },

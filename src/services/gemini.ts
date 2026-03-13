@@ -40,3 +40,28 @@ export async function getRecommendations(
     throw error;
   }
 }
+
+export async function askFollowUp(
+  recommendation: Recommendation,
+  question: string,
+  chatHistory: { role: 'user' | 'assistant'; content: string }[]
+): Promise<string> {
+  try {
+    const response = await fetch('/api/ask', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ recommendation, question, chatHistory })
+    });
+
+    if (!response.ok) {
+      const errText = await response.text();
+      throw new Error(`API ${response.status}: ${errText}`);
+    }
+
+    const data = await response.json();
+    return data.answer;
+  } catch (error) {
+    console.error("Failed to ask follow-up:", error);
+    throw error;
+  }
+}

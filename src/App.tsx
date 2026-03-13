@@ -33,11 +33,13 @@ import {
   CheckCircle2,
   Upload,
   Hourglass,
-  RotateCcw
+  RotateCcw,
+  MessageSquare,
+  Send
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { cn } from './lib/utils';
-import { getRecommendations, Recommendation } from './services/gemini';
+import { getRecommendations, Recommendation, askFollowUp } from './services/gemini';
 import { useTheme } from './context/ThemeContext';
 
 // --- Constants ---
@@ -112,7 +114,18 @@ const MoodButton = ({ mood, isActive, onClick }: { mood: any, isActive: boolean,
   </motion.button>
 );
 
-const RecCard = ({ rec, onClick, onFeedback }: { rec: Recommendation, onClick: () => void, onFeedback: (id: string, type: 'like' | 'dislike' | 'save') => void, key?: any }) => {
+const RecCard = ({ 
+  rec, 
+  onClick, 
+  onFeedback, 
+  onAsk 
+}: { 
+  rec: Recommendation, 
+  onClick: () => void, 
+  onFeedback: (id: string, type: 'like' | 'dislike' | 'save') => void,
+  onAsk: (rec: Recommendation) => void,
+  key?: any 
+}) => {
   return (
     <motion.div
       layout
@@ -155,6 +168,12 @@ const RecCard = ({ rec, onClick, onFeedback }: { rec: Recommendation, onClick: (
               className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-600 hover:text-zinc-900 dark:hover:text-white rounded-full transition-colors text-zinc-400 dark:text-zinc-500"
             >
               <ThumbsDown size={20} />
+            </button>
+            <button
+              onClick={() => onAsk(rec)}
+              className="flex items-center gap-2 px-3 py-2 bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-all border border-rose-100/50 dark:border-rose-800/50 ml-2"
+            >
+              <MessageSquare size={14} /> Ask AI
             </button>
           </div>
           <button
@@ -215,6 +234,13 @@ export default function App() {
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Chat State
+  const [isChatOpen, setIsChatOpen] = useState(false);
+  const [chatTarget, setChatTarget] = useState<Recommendation | null>(null);
+  const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([]);
+  const [chatInput, setChatInput] = useState("");
+  const [isChatLoading, setIsChatLoading] = useState(false);
 
   const [editForm, setEditForm] = useState({
     bio: '',
@@ -397,6 +423,31 @@ export default function App() {
       return () => clearTimeout(timer);
     }
   }, [mood, category, location, user, history, handleFetchRecommendations]);
+
+  const handleAsk = (rec: Recommendation) => {
+    setChatTarget(rec);
+    setChatMessages([]);
+    setChatInput("");
+    setIsChatOpen(true);
+  };
+
+  const handleSendMessage = async () => {
+    if (!chatInput.trim() || !chatTarget) return;
+
+    const userMsg = { role: 'user' as const, content: chatInput };
+    setChatMessages(prev => [...prev, userMsg]);
+    setChatInput("");
+    setIsChatLoading(true);
+
+    try {
+      const answer = await askFollowUp(chatTarget, chatInput, chatMessages);
+      setChatMessages(prev => [...prev, { role: 'assistant' as const, content: answer }]);
+    } catch (err) {
+      setChatMessages(prev => [...prev, { role: 'assistant' as const, content: "Sorry, Electa encountered an issue answering that. Please try again." }]);
+    } finally {
+      setIsChatLoading(false);
+    }
+  };
 
   const handleFeedback = async (id: string, type: 'like' | 'dislike' | 'save') => {
     const item = recommendations.find(r => r.id === id);
@@ -939,6 +990,7 @@ export default function App() {
                       rec={rec}
                       onClick={() => setSelectedRec(rec)}
                       onFeedback={handleFeedback}
+                      onAsk={handleAsk}
                     />
                   ))}
                 </motion.div>
@@ -1218,29 +1270,41 @@ export default function App() {
                                 <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-1">{rec.category}</span>
                                 <h5 className="font-bold text-sm text-zinc-900 dark:text-white truncate">{rec.title}</h5>
                               </div>
-                              <button
-                                onClick={(e) => {
-                                  e.stopPropagation();
-                                  const newBookmarks = user.bookmarks.filter(b => b.id !== rec.id);
-                                  setUser({ ...user, bookmarks: newBookmarks });
+                              <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-all z-10">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleAsk(rec);
+                                  }}
+                                  className="p-1.5 bg-white dark:bg-zinc-700 rounded-full text-zinc-400 hover:text-rose-500 shadow-sm"
+                                  title="Ask AI"
+                                >
+                                  <MessageSquare size={12} />
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const newBookmarks = user.bookmarks.filter(b => b.id !== rec.id);
+                                    setUser({ ...user, bookmarks: newBookmarks });
 
-                                  // sync deletion directly
-                                  fetch('/api/user/update', {
-                                    method: 'POST',
-                                    headers: { 'Content-Type': 'application/json' },
-                                    body: JSON.stringify({
-                                      email: user.email,
-                                      bio: user.bio,
-                                      profile_photo: user.profile_photo,
-                                      preferences: user.preferences,
-                                      bookmarks: newBookmarks
-                                    }),
-                                  }).catch(err => console.error("Failed to sync bookmark deletion", err));
-                                }}
-                                className="absolute top-2 right-2 p-1.5 bg-white dark:bg-zinc-700 rounded-full text-zinc-400 hover:text-rose-500 opacity-0 group-hover:opacity-100 transition-all shadow-sm z-10"
-                              >
-                                <X size={12} />
-                              </button>
+                                    fetch('/api/user/update', {
+                                      method: 'POST',
+                                      headers: { 'Content-Type': 'application/json' },
+                                      body: JSON.stringify({
+                                        email: user.email,
+                                        bio: user.bio,
+                                        profile_photo: user.profile_photo,
+                                        preferences: user.preferences,
+                                        bookmarks: newBookmarks
+                                      }),
+                                    }).catch(err => console.error("Failed to sync bookmark deletion", err));
+                                  }}
+                                  className="p-1.5 bg-white dark:bg-zinc-700 rounded-full text-zinc-400 hover:text-rose-500 shadow-sm"
+                                  title="Remove bookmark"
+                                >
+                                  <X size={12} />
+                                </button>
+                              </div>
                             </div>
                           ))}
                         </div>
@@ -1310,6 +1374,90 @@ export default function App() {
                 className="px-6 py-4 border border-zinc-100 dark:border-zinc-700 rounded-2xl font-bold hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all flex items-center gap-2 text-zinc-900 dark:text-white"
               >
                 <Zap size={18} className="text-amber-500" /> Auto-Detect
+              </button>
+            </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Talk to the Card Chat Modal */}
+      <Modal isOpen={isChatOpen} onClose={() => setIsChatOpen(false)}>
+        <div className="flex flex-col h-[600px] max-h-[80vh] bg-white dark:bg-zinc-900 overflow-hidden">
+          {/* Chat Header */}
+          <div className="p-6 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-800/50">
+            <div className="flex items-center gap-4">
+              <div className="w-10 h-10 rounded-xl bg-zinc-900 dark:bg-white flex items-center justify-center text-white dark:text-zinc-900">
+                <Sparkles size={18} />
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-zinc-900 dark:text-white">Ask Electa</h3>
+                <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">About {chatTarget?.title}</p>
+              </div>
+            </div>
+            <button onClick={() => setIsChatOpen(false)} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors text-zinc-400">
+              <X size={20} />
+            </button>
+          </div>
+
+          {/* Chat Messages */}
+          <div className="flex-1 overflow-y-auto p-6 space-y-4">
+            {chatMessages.length === 0 && (
+              <div className="text-center py-10">
+                <div className="w-12 h-12 bg-zinc-50 dark:bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-4 text-zinc-300">
+                  <MessageSquare size={24} />
+                </div>
+                <p className="text-sm text-zinc-500 dark:text-zinc-400 px-10">
+                  "Is this place good for a quiet dinner?" or "What should I wear?"
+                </p>
+              </div>
+            )}
+            {chatMessages.map((msg, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={cn(
+                  "flex",
+                  msg.role === 'user' ? "justify-end" : "justify-start"
+                )}
+              >
+                <div className={cn(
+                  "max-w-[80%] rounded-2xl px-4 py-3 text-sm font-medium leading-relaxed shadow-sm",
+                  msg.role === 'user' 
+                    ? "bg-rose-500 text-white rounded-tr-none" 
+                    : "bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 rounded-tl-none border border-zinc-200/50 dark:border-zinc-700/50"
+                )}>
+                  {msg.content}
+                </div>
+              </motion.div>
+            ))}
+            {isChatLoading && (
+              <div className="flex justify-start">
+                <div className="bg-zinc-100 dark:bg-zinc-800 rounded-2xl rounded-tl-none px-4 py-3 text-sm border border-zinc-200/50 dark:border-zinc-700/50 shadow-sm">
+                  <Loader2 size={16} className="animate-spin text-zinc-400" />
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Chat Input */}
+          <div className="p-4 bg-zinc-50 dark:bg-zinc-800/30 border-t border-zinc-100 dark:border-zinc-800">
+            <div className="flex gap-2">
+              <input
+                type="text"
+                placeholder="Ask a question..."
+                value={chatInput}
+                onChange={(e) => setChatInput(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                disabled={isChatLoading}
+                className="flex-1 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20 disabled:opacity-50 dark:text-white"
+              />
+              <button
+                onClick={handleSendMessage}
+                disabled={isChatLoading || !chatInput.trim()}
+                className="p-3 bg-rose-500 hover:bg-rose-600 text-white rounded-xl transition-all shadow-lg shadow-rose-200 dark:shadow-rose-900/20 disabled:opacity-50 disabled:grayscale"
+              >
+                <Send size={18} />
               </button>
             </div>
           </div>
