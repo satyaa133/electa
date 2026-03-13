@@ -121,20 +121,18 @@ const RecCard = ({ rec, onClick, onFeedback }: { rec: Recommendation, onClick: (
       className="bg-white dark:bg-zinc-800 rounded-3xl border border-zinc-100 dark:border-zinc-700 shadow-sm hover:shadow-xl dark:hover:shadow-2xl dark:hover:shadow-black/30 transition-all group cursor-pointer flex flex-col h-full relative"
       onClick={onClick}
     >
-      <div className="absolute top-4 right-4 z-20">
-        <span className="px-3 py-1 bg-zinc-100 dark:bg-zinc-900 rounded-full text-[10px] font-bold uppercase tracking-widest text-zinc-900 dark:text-white shadow-sm">
-          {rec.category}
-        </span>
-      </div>
       <div className="p-6 flex-1 flex flex-col">
-        <div className="flex items-start justify-between mb-2">
-          <h3 className="text-xl font-bold text-zinc-900 dark:text-white line-clamp-1">{rec.title}</h3>
+        <div className="flex items-center justify-between mb-3">
+          <span className="px-3 py-1 bg-zinc-100 dark:bg-zinc-900 rounded-full text-[10px] font-bold uppercase tracking-widest text-zinc-900 dark:text-white border border-zinc-200 dark:border-zinc-700">
+            {rec.category}
+          </span>
           {rec.details.rating && (
             <div className="flex items-center gap-1 text-amber-500 font-bold text-sm">
               <Star size={14} fill="currentColor" /> {rec.details.rating}
             </div>
           )}
         </div>
+        <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2 line-clamp-1">{rec.title}</h3>
         <p className="text-zinc-500 dark:text-zinc-400 text-sm line-clamp-2 mb-4">{rec.description}</p>
 
         <div className="p-3 bg-zinc-50 dark:bg-zinc-700 rounded-xl mb-6">
