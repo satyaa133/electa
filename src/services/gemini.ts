@@ -4,7 +4,6 @@ export interface Recommendation {
   description: string;
   category: string;
   reason: string;
-  imageUrl: string;
   details: {
     rating?: string;
     year?: string;

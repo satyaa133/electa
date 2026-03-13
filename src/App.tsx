@@ -113,47 +113,18 @@ const MoodButton = ({ mood, isActive, onClick }: { mood: any, isActive: boolean,
 );
 
 const RecCard = ({ rec, onClick, onFeedback }: { rec: Recommendation, onClick: () => void, onFeedback: (id: string, type: 'like' | 'dislike' | 'save') => void, key?: any }) => {
-  const [imageLoaded, setImageLoaded] = useState(false);
-
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="bg-white dark:bg-zinc-800 rounded-3xl overflow-hidden border border-zinc-100 dark:border-zinc-700 shadow-sm hover:shadow-xl dark:hover:shadow-2xl dark:hover:shadow-black/30 transition-all group cursor-pointer flex flex-col h-full"
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      className="bg-white dark:bg-zinc-800 rounded-3xl border border-zinc-100 dark:border-zinc-700 shadow-sm hover:shadow-xl dark:hover:shadow-2xl dark:hover:shadow-black/30 transition-all group cursor-pointer flex flex-col h-full relative"
       onClick={onClick}
     >
-      <div className="relative aspect-[4/3] overflow-hidden bg-zinc-100 dark:bg-zinc-900 rounded-t-3xl">
-        {!imageLoaded && (
-          <div className="absolute inset-0 flex items-center justify-center bg-zinc-100 dark:bg-zinc-900 z-10">
-            <Loader2 size={24} className="animate-spin text-zinc-300 dark:text-zinc-700" />
-          </div>
-        )}
-        <img
-          src={rec.imageUrl}
-          alt={rec.title}
-          loading="lazy"
-          decoding="async"
-          onLoad={() => setImageLoaded(true)}
-          onError={(e) => {
-            const target = e.currentTarget as HTMLImageElement;
-            if (!target.src.includes('pollinations.ai')) {
-              target.src = `https://image.pollinations.ai/prompt/${encodeURIComponent(rec.title + ' ' + rec.category + ' high quality')}`;
-            } else {
-              setImageLoaded(true); // Failsafe to clear loading spinner even if fallback fails
-            }
-          }}
-          className={cn(
-            "w-full h-full object-cover object-center group-hover:scale-105 transition-all duration-700 will-change-transform",
-            imageLoaded ? "opacity-100 scale-100 blur-0" : "opacity-0 scale-110 blur-xl"
-          )}
-          referrerPolicy="no-referrer"
-        />
-        <div className="absolute top-4 left-4 z-20">
-          <span className="px-3 py-1 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-sm rounded-full text-[10px] font-bold uppercase tracking-widest text-zinc-900 dark:text-white shadow-sm">
-            {rec.category}
-          </span>
-        </div>
+      <div className="absolute top-4 right-4 z-20">
+        <span className="px-3 py-1 bg-zinc-100 dark:bg-zinc-900 rounded-full text-[10px] font-bold uppercase tracking-widest text-zinc-900 dark:text-white shadow-sm">
+          {rec.category}
+        </span>
       </div>
       <div className="p-6 flex-1 flex flex-col">
         <div className="flex items-start justify-between mb-2">
@@ -968,22 +939,9 @@ export default function App() {
       <Modal isOpen={!!selectedRec} onClose={() => setSelectedRec(null)}>
         {selectedRec && (
           <div className="flex flex-col bg-white dark:bg-zinc-900 min-h-full">
-            <div className="h-64 flex-shrink-0 relative">
-              <img
-                src={selectedRec.imageUrl}
-                alt={selectedRec.title}
-                className="w-full h-full object-cover"
-                referrerPolicy="no-referrer"
-                onError={(e) => {
-                  const target = e.currentTarget as HTMLImageElement;
-                  if (!target.src.includes('pollinations.ai')) {
-                    target.src = `https://image.pollinations.ai/prompt/${encodeURIComponent(selectedRec.title + ' ' + selectedRec.category + ' high quality')}`;
-                  }
-                }}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-              <div className="absolute bottom-6 left-8 right-8">
-                <span className="px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-[10px] font-bold uppercase tracking-widest text-white border border-white/20 mb-3 inline-block">
+            <div className="h-32 flex-shrink-0 relative bg-zinc-900 dark:bg-zinc-800 flex items-center px-8">
+              <div>
+                <span className="px-3 py-1 bg-white/10 backdrop-blur-md rounded-full text-[10px] font-bold uppercase tracking-widest text-white border border-white/10 mb-3 inline-block">
                   {selectedRec.category}
                 </span>
                 <h2 className="text-3xl font-bold text-white tracking-tight">{selectedRec.title}</h2>
@@ -1225,8 +1183,8 @@ export default function App() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           {user.bookmarks.map(rec => (
                             <div key={rec.id} className="group relative flex gap-3 p-3 bg-zinc-50 dark:bg-zinc-800 rounded-2xl border border-zinc-100 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-500 transition-all cursor-pointer" onClick={() => setSelectedRec(rec)}>
-                              <div className="w-16 h-16 rounded-xl overflow-hidden flex-shrink-0 bg-zinc-200 dark:bg-zinc-900">
-                                <img src={rec.imageUrl} alt={rec.title} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                              <div className="w-10 h-10 rounded-xl flex-shrink-0 bg-zinc-200 dark:bg-zinc-900 flex items-center justify-center">
+                                <Sparkles size={16} className="text-zinc-400" />
                               </div>
                               <div className="flex flex-col justify-center overflow-hidden">
                                 <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-1">{rec.category}</span>
