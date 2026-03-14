@@ -61,6 +61,75 @@ const CATEGORIES = [
   { id: 'games', label: 'Games', icon: Gamepad2 },
 ];
 
+const SAMPLE_QUESTIONS: Record<string, string[]> = {
+  movies: [
+    "Is this a good family movie?",
+    "Tell me about the director",
+    "Where can I watch this?",
+    "Is it too scary for kids?"
+  ],
+  movie: [
+    "Is this a good family movie?",
+    "Tell me about the director",
+    "Where can I watch this?",
+    "Is it too scary for kids?"
+  ],
+  music: [
+    "What genre is this?",
+    "Recommend similar artists",
+    "Tell me about this album",
+    "Is this good for a party?"
+  ],
+  books: [
+    "Is this part of a series?",
+    "How long is this book?",
+    "What's the writing style like?",
+    "Who is the target audience?"
+  ],
+  book: [
+    "Is this part of a series?",
+    "How long is this book?",
+    "What's the writing style like?",
+    "Who is the target audience?"
+  ],
+  restaurants: [
+    "What's the best dish here?",
+    "Is it good for a date?",
+    "Do I need a reservation?",
+    "Is it vegetarian-friendly?"
+  ],
+  food: [
+    "What's the best dish here?",
+    "Is it good for a date?",
+    "Do I need a reservation?",
+    "Is it vegetarian-friendly?"
+  ],
+  restaurant: [
+    "What's the best dish here?",
+    "Is it good for a date?",
+    "Do I need a reservation?",
+    "Is it vegetarian-friendly?"
+  ],
+  games: [
+    "What's the difficulty level?",
+    "How long to beat?",
+    "Is it multiplayer?",
+    "What platforms is it on?"
+  ],
+  game: [
+    "What's the difficulty level?",
+    "How long to beat?",
+    "Is it multiplayer?",
+    "What platforms is it on?"
+  ],
+  default: [
+    "Tell me more about this",
+    "Why do you recommend this?",
+    "Is this popular right now?",
+    "Give me similar suggestions"
+  ]
+};
+
 // --- Components ---
 
 const Modal = ({ isOpen, onClose, children }: { isOpen: boolean, onClose: () => void, children: React.ReactNode }) => (
@@ -1402,13 +1471,19 @@ export default function App() {
           {/* Chat Messages */}
           <div className="flex-1 overflow-y-auto p-6 space-y-4">
             {chatMessages.length === 0 && (
-              <div className="text-center py-10">
-                <div className="w-12 h-12 bg-zinc-50 dark:bg-zinc-800 rounded-full flex items-center justify-center mx-auto mb-4 text-zinc-300">
-                  <MessageSquare size={24} />
+              <div className="py-4">
+                <p className="text-sm font-bold text-zinc-900 dark:text-white mb-4 px-2">Suggested Questions</p>
+                <div className="grid grid-cols-1 gap-2">
+                  {(SAMPLE_QUESTIONS[chatTarget?.category.toLowerCase() || 'default'] || SAMPLE_QUESTIONS.default).map((q, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => setChatInput(q)}
+                      className="text-left px-4 py-3 text-xs bg-white dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700/50 rounded-xl hover:border-rose-300 dark:hover:border-rose-500/50 hover:bg-rose-50 dark:hover:bg-rose-900/10 transition-all text-zinc-600 dark:text-zinc-400 font-medium"
+                    >
+                      {q}
+                    </button>
+                  ))}
                 </div>
-                <p className="text-sm text-zinc-500 dark:text-zinc-400 px-10">
-                  "Is this place good for a quiet dinner?" or "What should I wear?"
-                </p>
               </div>
             )}
             {chatMessages.map((msg, i) => (
