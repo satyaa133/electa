@@ -310,6 +310,7 @@ export default function App() {
   const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([]);
   const [chatInput, setChatInput] = useState("");
   const [isChatLoading, setIsChatLoading] = useState(false);
+  const [apiContext, setApiContext] = useState<{ weather: string, timeOfDay: string } | null>(null);
 
   const [editForm, setEditForm] = useState({
     bio: '',
@@ -468,9 +469,28 @@ export default function App() {
     setApiError(null);
     try {
       const prefs = user ? [...user.preferences.genres, ...user.preferences.dietary, ...user.preferences.interests] : [];
-      const recs = await getRecommendations(mood, category, prefs, history, location || undefined);
+      // Use the raw response to get the context
+      const response = await fetch('/api/recommendations', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          mood,
+          category,
+          preferences: prefs,
+          history,
+          location: location || undefined
+        })
+      });
+      const data = await response.json();
+      
+      if (data.error) throw new Error(data.error);
+      
+      const recs = data.recommendations;
       setRecommendations(recs);
       setRecCache(prev => ({ ...prev, [cacheKey]: recs }));
+      if (data.context) {
+        setApiContext(data.context);
+      }
     } catch (error: any) {
       console.error("Failed to fetch recommendations", error);
       if (error.message === "RATE_LIMIT") {
@@ -958,7 +978,13 @@ export default function App() {
               </button>
               <div className="hidden md:flex items-center gap-2 text-[10px] font-mono text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">
                 <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                Agentic Context Active
+                {apiContext ? (
+                  <span className="flex items-center gap-2">
+                    {apiContext.weather} • {apiContext.timeOfDay}
+                  </span>
+                ) : (
+                  "Agentic Context Active"
+                )}
               </div>
             </div>
           </div>

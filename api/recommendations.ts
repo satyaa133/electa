@@ -35,7 +35,32 @@ export default async function handler(req: any, res: any) {
         return res.status(500).json({ error: "GEMINI_API_KEY is missing from Vercel Environment Variables." });
     }
 
+    // --- Context Helpers ---
+    const getEnvContext = async (loc: string) => {
+        let weather = "Unknown";
+        let timeOfDay = "Day";
+        const hour = new Date().getHours();
+
+        // Determine Time of Day
+        if (hour >= 5 && hour < 12) timeOfDay = "Morning";
+        else if (hour >= 12 && hour < 17) timeOfDay = "Afternoon";
+        else if (hour >= 17 && hour < 21) timeOfDay = "Evening";
+        else timeOfDay = "Late Night";
+
+        // Determine Weather (Simple fallback fetch)
+        try {
+            // Using wttr.in as a zero-config fallback for city names
+            const weatherRes = await axios.get(`https://wttr.in/${encodeURIComponent(loc)}?format=%C`, { timeout: 3000 });
+            weather = weatherRes.data || "Clear";
+        } catch (e) {
+            console.error("Weather fetch failed:", e);
+        }
+
+        return { weather, timeOfDay, hour };
+    };
+
     try {
+        const { weather, timeOfDay, hour } = await getEnvContext(location || "London");
         const ai = new GoogleGenAI({ apiKey });
         const prompt = `
             User Mood: ${mood}
@@ -43,8 +68,14 @@ export default async function handler(req: any, res: any) {
             Preferences: ${(preferences || []).join(", ")}
             Recent History: ${(history || []).join(", ")}
             User Location: ${location || "Unknown"}
+            Current Time: ${timeOfDay} (${hour}:00)
+            Current Weather: ${weather}
 
             Act as a precise recommendation engine. Recommend exactly 12 items in the ${category} category based on mood: ${mood}.
+            
+            CONTEXTUAL RULES:
+            - TIME: If it's Morning, prioritize breakfast/brunch/coffee. If Evening/Night, prioritize bars/dinner/night-life.
+            - WEATHER: If it mentions "Rain", "Snow", "Storm", prioritize INDOOR activities or Home Delivery food. If "Clear" or "Sunny", prioritize OUTDOOR/Park/Terrace options.
             
             VARIETY: Ensure UNIQUE, less obvious results. DO NOT just recommend the most popular items.
             Random seed: ${Math.random()}
@@ -117,7 +148,11 @@ export default async function handler(req: any, res: any) {
             });
         }
 
-        return res.status(200).json({ recommendations: rawRecs, version: "v6-no-images" });
+        return res.status(200).json({ 
+            recommendations: rawRecs, 
+            version: "v6-no-images",
+            context: { weather, timeOfDay }
+        });
 
     } catch (error: any) {
         console.error("Gemini API error:", error);
