@@ -1,4 +1,7 @@
 import { GoogleGenAI } from "@google/genai";
+import dotenv from "dotenv";
+
+dotenv.config({ path: '.env.local' });
 
 export default async function handler(req: any, res: any) {
     // Enable CORS
@@ -56,7 +59,7 @@ export default async function handler(req: any, res: any) {
         `;
 
         const result = await ai.models.generateContent({
-            model: "gemini-1.5-flash", // Sticking to 1.5-flash as it's proven stable here
+            model: "gemini-2.5-flash", 
             contents: context,
             config: {
                 temperature: 0.7,
@@ -64,6 +67,7 @@ export default async function handler(req: any, res: any) {
             }
         });
 
+        console.log("Follow-up result received");
         const responseText = result.text || "I'm sorry, I couldn't generate an answer.";
 
         return res.status(200).json({ 
