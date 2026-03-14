@@ -40,6 +40,7 @@ export default async function handler(req: any, res: any) {
         let weather = "Unknown";
         let timeOfDay = "Day";
         const hour = new Date().getHours();
+        const googleKey = process.env.GOOGLE_MAPS_API_KEY;
 
         // Determine Time of Day
         if (hour >= 5 && hour < 12) timeOfDay = "Morning";
@@ -47,13 +48,35 @@ export default async function handler(req: any, res: any) {
         else if (hour >= 17 && hour < 21) timeOfDay = "Evening";
         else timeOfDay = "Late Night";
 
-        // Determine Weather (Simple fallback fetch)
-        try {
-            // Using wttr.in as a zero-config fallback for city names
-            const weatherRes = await axios.get(`https://wttr.in/${encodeURIComponent(loc)}?format=%C`, { timeout: 3000 });
-            weather = weatherRes.data || "Clear";
-        } catch (e) {
-            console.error("Weather fetch failed:", e);
+        // Attempt Google Weather (Requires Geocoding first)
+        if (googleKey) {
+            try {
+                // 1. Geocode
+                const geoRes = await axios.get(`https://maps.googleapis.com/maps/api/geocode/json?address=${encodeURIComponent(loc)}&key=${googleKey}`);
+                const pos = geoRes.data.results?.[0]?.geometry?.location;
+                
+                if (pos) {
+                    // 2. Fetch Weather (Using the modern Google Maps Weather API endpoint)
+                    // Note: If the specific Weather API isn't enabled, this will catch in the error block
+                    const weatherUrl = `https://weather.googleapis.com/v1/currentConditions:lookup?location.latitude=${pos.lat}&location.longitude=${pos.lng}&key=${googleKey}`;
+                    const weatherRes = await axios.get(weatherUrl);
+                    // Google Weather returns detailed conditions
+                    weather = weatherRes.data?.condition?.text || "Clear";
+                    console.log(`Google Weather Success for ${loc}: ${weather}`);
+                }
+            } catch (e) {
+                console.error("Google Weather failed, falling back to wttr.in:", (e as any).message);
+            }
+        }
+
+        // Fallback to wttr.in if still unknown
+        if (weather === "Unknown") {
+            try {
+                const weatherRes = await axios.get(`https://wttr.in/${encodeURIComponent(loc)}?format=%C`, { timeout: 3000 });
+                weather = weatherRes.data || "Clear";
+            } catch (e) {
+                console.error("wttr.in fetch failed:", e);
+            }
         }
 
         return { weather, timeOfDay, hour };
