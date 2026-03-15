@@ -50,13 +50,15 @@ export default async function handler(req: any, res: any) {
 
             Instructions: Answer the user's follow-up question about THIS specific recommendation. 
             Be helpful, concise, and stay in character as a premium personal assistant named Electa.
+            Focus on answering the question directly within the chat.
             If the question is unrelated to the recommendation, politely guide them back.
 
             GOOGLE LINKS:
-            - Always try to provide 1-2 helpful external links at the end of your response.
-            - For Restaurants/Places: Provide a Google Maps search link: [Find on Google Maps](https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(recommendation.title + " " + (recommendation.details.address || ""))})
-            - For Movies/Books/Other: Provide a Google Search link: [Search on Google](https://www.google.com/search?q=${encodeURIComponent(recommendation.title + " " + recommendation.category)})
-            - Format the link clearly using markdown.
+            - Provide external links ONLY if they are truly necessary or add significant value (e.g., finding a location on a map or deep-diving into a complex topic).
+            - Do NOT add links if the answer is already complete or the question is simple.
+            - If needed, provide a Google Maps search link for places: [Find on Google Maps](https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(recommendation.title + " " + (recommendation.details.address || ""))})
+            - For other topics, use a Google Search link: [Search on Google](https://www.google.com/search?q=${encodeURIComponent(recommendation.title + " " + recommendation.category)})
+            - Format the link clearly using markdown at the end of your response.
 
             Previous Conversation:
             ${historyContext}
