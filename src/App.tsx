@@ -1528,7 +1528,29 @@ export default function App() {
                     ? "bg-rose-500 text-white rounded-tr-none" 
                     : "bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 rounded-tl-none border border-zinc-200/50 dark:border-zinc-700/50"
                 )}>
-                  {msg.content}
+                  {msg.role === 'assistant' ? (
+                    <div className="whitespace-pre-wrap break-words">
+                      {msg.content.split(/(\[.*?\]\(.*?\))/g).map((part, index) => {
+                        const match = part.match(/\[(.*?)\]\((.*?)\)/);
+                        if (match) {
+                          return (
+                            <a 
+                              key={index} 
+                              href={match[2]} 
+                              target="_blank" 
+                              rel="noopener noreferrer" 
+                              className="text-rose-600 dark:text-rose-400 font-bold underline hover:text-rose-700 dark:hover:text-rose-300 transition-colors"
+                            >
+                              {match[1]}
+                            </a>
+                          );
+                        }
+                        return part;
+                      })}
+                    </div>
+                  ) : (
+                    msg.content
+                  )}
                 </div>
               </motion.div>
             ))}

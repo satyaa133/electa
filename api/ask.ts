@@ -52,6 +52,12 @@ export default async function handler(req: any, res: any) {
             Be helpful, concise, and stay in character as a premium personal assistant named Electa.
             If the question is unrelated to the recommendation, politely guide them back.
 
+            GOOGLE LINKS:
+            - Always try to provide 1-2 helpful external links at the end of your response.
+            - For Restaurants/Places: Provide a Google Maps search link: [Find on Google Maps](https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(recommendation.title + " " + (recommendation.details.address || ""))})
+            - For Movies/Books/Other: Provide a Google Search link: [Search on Google](https://www.google.com/search?q=${encodeURIComponent(recommendation.title + " " + recommendation.category)})
+            - Format the link clearly using markdown.
+
             Previous Conversation:
             ${historyContext}
 
