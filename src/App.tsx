@@ -187,12 +187,18 @@ const RecCard = ({
   rec, 
   onClick, 
   onFeedback, 
-  onAsk 
+  onAsk,
+  isLiked = false,
+  isDisliked = false,
+  isSaved = false
 }: { 
   rec: Recommendation, 
   onClick: () => void, 
   onFeedback: (id: string, type: 'like' | 'dislike' | 'save') => void,
   onAsk: (rec: Recommendation) => void,
+  isLiked?: boolean,
+  isDisliked?: boolean,
+  isSaved?: boolean,
   key?: any 
 }) => {
   return (
@@ -200,6 +206,7 @@ const RecCard = ({
       layout
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
+      whileHover={{ y: -4 }}
       className="bg-white dark:bg-zinc-800 rounded-3xl border border-zinc-100 dark:border-zinc-700 shadow-sm hover:shadow-xl dark:hover:shadow-2xl dark:hover:shadow-black/30 transition-all group cursor-pointer flex flex-col h-full relative"
       onClick={onClick}
     >
@@ -226,31 +233,50 @@ const RecCard = ({
 
         <div className="flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
           <div className="flex items-center gap-2">
-            <button
+            <motion.button
+              whileTap={{ scale: 0.9 }}
               onClick={() => onFeedback(rec.id, 'like')}
-              className="p-2 hover:bg-rose-50 dark:hover:bg-rose-900/30 hover:text-rose-500 rounded-full transition-colors text-zinc-400 dark:text-zinc-500"
+              className={cn(
+                "p-2 rounded-full transition-colors",
+                isLiked 
+                  ? "bg-rose-50 dark:bg-rose-900/30 text-rose-500" 
+                  : "hover:bg-rose-50 dark:hover:bg-rose-900/30 hover:text-rose-500 text-zinc-400 dark:text-zinc-500"
+              )}
             >
-              <Heart size={20} />
-            </button>
-            <button
+              <Heart size={20} fill={isLiked ? "currentColor" : "none"} />
+            </motion.button>
+            <motion.button
+              whileTap={{ scale: 0.9 }}
               onClick={() => onFeedback(rec.id, 'dislike')}
-              className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-600 hover:text-zinc-900 dark:hover:text-white rounded-full transition-colors text-zinc-400 dark:text-zinc-500"
+              className={cn(
+                "p-2 rounded-full transition-colors",
+                isDisliked
+                  ? "bg-zinc-100 dark:bg-zinc-600 text-zinc-900 dark:text-white"
+                  : "hover:bg-zinc-100 dark:hover:bg-zinc-600 hover:text-zinc-900 dark:hover:text-white text-zinc-400 dark:text-zinc-500"
+              )}
             >
-              <ThumbsDown size={20} />
-            </button>
-            <button
+              <ThumbsDown size={20} fill={isDisliked ? "currentColor" : "none"} />
+            </motion.button>
+            <motion.button
+              whileTap={{ scale: 0.9 }}
               onClick={() => onAsk(rec)}
               className="flex items-center gap-2 px-3 py-2 bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 rounded-xl text-[10px] font-bold uppercase tracking-widest hover:bg-rose-100 dark:hover:bg-rose-900/40 transition-all border border-rose-100/50 dark:border-rose-800/50 ml-2"
             >
               <MessageSquare size={14} /> Ask AI
-            </button>
+            </motion.button>
           </div>
-          <button
+          <motion.button
+            whileTap={{ scale: 0.9 }}
             onClick={() => onFeedback(rec.id, 'save')}
-            className="p-2 hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-500 rounded-full transition-colors text-zinc-400 dark:text-zinc-500"
+            className={cn(
+              "p-2 rounded-full transition-colors",
+              isSaved
+                ? "bg-blue-50 dark:bg-blue-900/30 text-blue-500"
+                : "hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-500 text-zinc-400 dark:text-zinc-500"
+            )}
           >
-            <Bookmark size={20} />
-          </button>
+            <Bookmark size={20} fill={isSaved ? "currentColor" : "none"} />
+          </motion.button>
         </div>
       </div>
     </motion.div>
@@ -292,6 +318,8 @@ export default function App() {
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
+  const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
+  const [dislikedIds, setDislikedIds] = useState<Set<string>>(new Set());
   const [history, setHistory] = useState<string[]>([]);
   const [location, setLocation] = useState<string | null>(() => {
     return user?.location || null;
@@ -478,7 +506,8 @@ export default function App() {
           category,
           preferences: prefs,
           history,
-          location: location || undefined
+          location: location || undefined,
+          userHour: new Date().getHours()
         })
       });
       const data = await response.json();
@@ -543,33 +572,62 @@ export default function App() {
     if (!item) return;
 
     if (type === 'like') {
-      setHistory(prev => [...prev, item.title].slice(-5));
+      setLikedIds(prev => {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id);
+        else {
+          next.add(id);
+          setDislikedIds(d => {
+            const dn = new Set(d);
+            dn.delete(id);
+            return dn;
+          });
+          setHistory(h => [...h, item.title].slice(-5));
+        }
+        return next;
+      });
+    }
+
+    if (type === 'dislike') {
+      setDislikedIds(prev => {
+        const next = new Set(prev);
+        if (next.has(id)) next.delete(id);
+        else {
+          next.add(id);
+          setLikedIds(l => {
+            const ln = new Set(l);
+            ln.delete(id);
+            return ln;
+          });
+        }
+        return next;
+      });
     }
 
     if (type === 'save' && user) {
-      // Check if already bookmarked
-      if (!user.bookmarks.some((b: any) => b.id === id)) {
-        const newBookmarks = [item, ...user.bookmarks];
-        const updatedUser = { ...user, bookmarks: newBookmarks };
-        setUser(updatedUser);
+      const isBookmarked = user.bookmarks.some((b: any) => b.id === id);
+      const newBookmarks = isBookmarked 
+        ? user.bookmarks.filter((b: any) => b.id !== id)
+        : [item, ...user.bookmarks];
+      
+      const updatedUser = { ...user, bookmarks: newBookmarks };
+      setUser(updatedUser);
 
-        // Sync to backend asynchronously
-        fetch('/api/user/update', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: user.email,
-            bio: user.bio,
-            profile_photo: user.profile_photo,
-            preferences: user.preferences,
-            bookmarks: newBookmarks
-          }),
-        }).catch(err => console.error("Failed to sync bookmark to server", err));
-      }
+      // Sync to backend asynchronously
+      fetch('/api/user/update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: user.email,
+          bio: user.bio,
+          profile_photo: user.profile_photo,
+          preferences: user.preferences,
+          bookmarks: newBookmarks
+        }),
+      }).catch(err => console.error("Failed to sync bookmark to server", err));
     }
 
     console.log(`Feedback for ${id}: ${type}`);
-    // Removed auto-refresh. The grid stays stable until the user explicitly requests new items.
   };
 
   const [authForm, setAuthForm] = useState({ email: '', password: '', name: '' });
@@ -1086,6 +1144,9 @@ export default function App() {
                       onClick={() => setSelectedRec(rec)}
                       onFeedback={handleFeedback}
                       onAsk={handleAsk}
+                      isLiked={likedIds.has(rec.id)}
+                      isDisliked={dislikedIds.has(rec.id)}
+                      isSaved={user?.bookmarks.some(b => b.id === rec.id)}
                     />
                   ))}
                 </motion.div>
