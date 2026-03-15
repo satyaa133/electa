@@ -222,13 +222,12 @@ const RecCard = ({
           )}
         </div>
         <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2 line-clamp-1">{rec.title}</h3>
-        <p className="text-zinc-500 dark:text-zinc-400 text-sm line-clamp-2 mb-4">{rec.description}</p>
-
+        <p className="text-zinc-500 dark:text-zinc-400 text-sm line-clamp-2 mb-4">{rec.description || "No description available."}</p>
         <div className="p-3 bg-zinc-50 dark:bg-zinc-700 rounded-xl mb-6">
           <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-400 dark:text-zinc-300 uppercase tracking-widest mb-1">
             <Sparkles size={12} className="text-amber-500" /> AI Reasoning
           </div>
-          <p className="text-xs text-zinc-600 dark:text-zinc-300 italic leading-relaxed">"{rec.reason}"</p>
+          <p className="text-xs text-zinc-600 dark:text-zinc-300 italic leading-relaxed">"{rec.reason || "AI selected this for your current vibe."}"</p>
         </div>
 
         <div className="flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
@@ -514,7 +513,11 @@ export default function App() {
       
       if (data.error) throw new Error(data.error);
       
-      const recs = data.recommendations;
+      const recs = (data.recommendations || []).map((r: any) => ({
+        ...r,
+        title: r.title || r.name || "Recommendation",
+        details: r.details || {}
+      }));
       setRecommendations(recs);
       setRecCache(prev => ({ ...prev, [cacheKey]: recs }));
       if (data.context) {
@@ -1186,16 +1189,15 @@ export default function App() {
             <div className="p-8">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-4">
-                  {selectedRec.details.rating && (
+                  {selectedRec.details?.rating && (
                     <div className="flex items-center gap-1 text-amber-500 font-bold bg-amber-50 dark:bg-amber-900/30 px-3 py-1 rounded-full border border-amber-100 dark:border-amber-900/50">
                       <Star size={18} fill="currentColor" /> {selectedRec.details.rating}
                     </div>
                   )}
-                  {selectedRec.details.year && (
+                  {selectedRec.details?.year && (
                     <span className="text-zinc-400 dark:text-zinc-500 text-sm font-medium">{selectedRec.details.year}</span>
                   )}
                 </div>
-
               </div>
 
               <div className="space-y-8">
@@ -1211,7 +1213,7 @@ export default function App() {
                       "{selectedRec.reason}"
                     </div>
                   </section>
-                  {selectedRec.details.tags && (
+                  {selectedRec.details?.tags && selectedRec.details.tags.length > 0 && (
                     <section>
                       <h4 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-3">Tags</h4>
                       <div className="flex flex-wrap gap-2">
@@ -1225,7 +1227,7 @@ export default function App() {
                   )}
                 </div>
 
-                {selectedRec.category === 'Food' && selectedRec.details.address && (
+                {selectedRec.category === 'Food' && selectedRec.details?.address && (
                   <section>
                     <h4 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-3">Location</h4>
                     <div className="flex items-center gap-3 text-sm text-zinc-600 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-800 p-4 rounded-2xl border border-zinc-100 dark:border-zinc-700">

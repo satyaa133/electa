@@ -63,7 +63,22 @@ export default async function handler(req: any, res: any) {
             - If Evening/Night, suggest bars/dinner.
             - If Raining/Stormy, suggest indoor activities.
             
-            Format: Raw JSON array of 12 recommendation objects.
+            Format: Raw JSON array of 12 objects following this exact schema:
+            {
+              "id": "string",
+              "title": "string",
+              "description": "string",
+              "category": "string",
+              "reason": "string",
+              "details": {
+                "rating": "string",
+                "year": "string",
+                "address": "string",
+                "tags": ["string"],
+                "link": "string"
+              }
+            }
+            NO markdown, NO extra text.
         `;
 
         const response = await ai.models.generateContent({
