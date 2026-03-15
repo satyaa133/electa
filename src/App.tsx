@@ -215,7 +215,7 @@ const RecCard = ({
           <span className="px-3 py-1 bg-zinc-100 dark:bg-zinc-900 rounded-full text-[10px] font-bold uppercase tracking-widest text-zinc-900 dark:text-white border border-zinc-200 dark:border-zinc-700">
             {rec.category}
           </span>
-          {rec.details.rating && (
+          {rec.details?.rating && (
             <div className="flex items-center gap-1 text-amber-500 font-bold text-sm">
               <Star size={14} fill="currentColor" /> {rec.details.rating}
             </div>
@@ -1146,7 +1146,7 @@ export default function App() {
                       onAsk={handleAsk}
                       isLiked={likedIds.has(rec.id)}
                       isDisliked={dislikedIds.has(rec.id)}
-                      isSaved={user?.bookmarks.some(b => b.id === rec.id)}
+                      isSaved={user?.bookmarks?.some(b => b.id === rec.id) || false}
                     />
                   ))}
                 </motion.div>
