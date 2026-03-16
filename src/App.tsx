@@ -306,6 +306,14 @@ export default function App() {
 
   useEffect(() => {
     if (user) {
+      // Hygiene check: remove duplicates or corrupted bookmarks
+      const cleanBookmarks = user.bookmarks.filter((b, idx, self) => 
+        b && b.title && self.findIndex(t => t.title === b.title || (t.id && t.id === b.id)) === idx
+      );
+      if (cleanBookmarks.length !== user.bookmarks.length) {
+        console.warn("Hygiene check: Removed duplicate/corrupted bookmarks");
+        setUser({ ...user, bookmarks: cleanBookmarks });
+      }
       localStorage.setItem('electa_user', JSON.stringify(user));
     } else {
       localStorage.removeItem('electa_user');
@@ -1179,7 +1187,11 @@ export default function App() {
                       onAsk={handleAsk}
                       isLiked={likedIds.has(rec.id)}
                       isDisliked={dislikedIds.has(rec.id)}
-                      isSaved={user?.bookmarks?.some(b => b.id === rec.id || b.title === rec.title) || false}
+                      isSaved={user?.bookmarks?.some(b => {
+                        const match = b.id === rec.id || b.title === rec.title;
+                        if (match) console.log(`[Debug] Match: "${rec.title}" matches bookmark "${b.title}" (ID match: ${b.id === rec.id}, Title match: ${b.title === rec.title})`);
+                        return match;
+                      }) || false}
                     />
                   ))}
                 </motion.div>

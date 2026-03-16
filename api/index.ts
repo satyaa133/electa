@@ -150,7 +150,7 @@ app.post('/api/recommendations', async (req, res) => {
         if (Array.isArray(recommendations)) {
             recommendations = recommendations.map((r: any, idx: number) => {
                 const slug = r.title ? r.title.toLowerCase().replace(/[^a-z0-9]+/g, '-') : 'rec';
-                return { ...r, id: `${slug}-${idx}` }; // idx added for uniqueness within a single response
+                return { ...r, id: `${category}-${slug}-${idx}` }; // idx added for uniqueness within a single response
             });
         }
 
