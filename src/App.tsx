@@ -353,6 +353,16 @@ export default function App() {
   const { isDark, toggleTheme } = useTheme();
 
   useEffect(() => {
+    // Check if API server (port 3000 via proxy) is reachable
+    fetch('/api/location')
+      .then(res => {
+        if (res.ok) console.log("✅ API Server Connection: OK");
+        else console.warn("⚠️ API Server returned error. Ensure 'npm run api' is running.");
+      })
+      .catch(() => console.error("❌ API Server Unreachable. Please run 'npm run api' in a separate terminal."));
+  }, []);
+
+  useEffect(() => {
     if (user) {
       setEditForm({
         bio: user.bio || '',
@@ -470,11 +480,8 @@ export default function App() {
         console.warn("Location access error, trying IP fallback:", err.code, err.message);
         const success = await fetchIPLocation();
         if (!success) {
-          if (err.code === 1) { // PERMISSION_DENIED
-            handleSetLocation("San Francisco, CA");
-          } else {
-            handleSetLocation("Location unavailable");
-          }
+          console.error("All location methods failed (Geolocation and IP Fallback).");
+          handleSetLocation("Location unavailable");
         }
         setIsLocating(false);
       },
