@@ -395,17 +395,16 @@ export default function App() {
 
   const fetchIPLocation = async () => {
     try {
-      const response = await fetch('https://ipapi.co/json/');
+      const response = await fetch('/api/location');
       if (!response.ok) throw new Error("IP location failed");
       const data = await response.json();
-      if (data.city) {
-        const loc = data.region ? `${data.city}, ${data.region}` : data.city;
-        console.log("IP Location found:", loc);
-        handleSetLocation(loc);
+      if (data.location) {
+        console.log("Internal IP Location found:", data.location);
+        handleSetLocation(data.location);
         return true;
       }
     } catch (err) {
-      console.error("IP Location fetch failed:", err);
+      console.error("Internal IP Location fetch failed:", err);
     }
     return false;
   };
