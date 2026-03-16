@@ -11,7 +11,7 @@ dotenv.config({ path: '.env.local' });
 const sql = (strings: TemplateStringsArray, ...values: any[]) => {
     const url = process.env.DATABASE_URL || process.env.POSTGRES_URL;
     if (!url) {
-        console.error("❌ Neon Database URL missing. Database operations will fail.");
+        console.error("❌ Neon Database URL missing.");
         throw new Error("Neon Database URL missing.");
     }
     return neon(url)(strings, ...values);

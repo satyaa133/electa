@@ -411,12 +411,17 @@ export default function App() {
 
   const fetchIPLocation = async () => {
     try {
+      console.log("Fetching IP location from /api/location...");
       const response = await fetch('/api/location');
-      if (!response.ok) throw new Error("IP location failed");
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`IP location API failed with status ${response.status}:`, errorText);
+        throw new Error("IP location failed");
+      }
       const data = await response.json();
       if (data.location) {
         console.log("Internal IP Location found:", data.location);
-        handleSetLocation(data.location);
+        handleSetLocation(data.location || "Unknown City");
         return true;
       }
     } catch (err) {
