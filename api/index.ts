@@ -10,7 +10,10 @@ dotenv.config({ path: '.env.local' });
 
 const sql = (strings: TemplateStringsArray, ...values: any[]) => {
     const url = process.env.DATABASE_URL || process.env.POSTGRES_URL;
-    if (!url) throw new Error("Neon Database URL missing from Vercel Environment Variables.");
+    if (!url) {
+        console.error("❌ Neon Database URL missing. Database operations will fail.");
+        throw new Error("Neon Database URL missing.");
+    }
     return neon(url)(strings, ...values);
 };
 
@@ -48,7 +51,11 @@ async function initDB() {
     }
 }
 
-initDB();
+if (process.env.DATABASE_URL || process.env.POSTGRES_URL) {
+    initDB();
+} else {
+    console.warn("⚠️ skipping initDB: Database URL missing.");
+}
 
 app.post('/api/auth/signup', async (req, res) => {
     const { email, password, name } = req.body;
@@ -105,10 +112,13 @@ app.get('/api/location', async (req, res) => {
             return res.json({ location: loc });
         }
         
-        res.status(404).json({ error: "Location not found" });
-    } catch (err) {
+        res.status(404).json({ error: "Location could not be determined from IP." });
+    } catch (err: any) {
         console.error("Backend IP location fetch failed:", err);
-        res.status(500).json({ error: "Failed to fetch location via IP" });
+        res.status(500).json({ 
+            error: "Internal server error fetching location",
+            details: err.message || "Unknown error"
+        });
     }
 });
 
