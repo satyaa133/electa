@@ -67,7 +67,7 @@ export default async function handler(req: any, res: any) {
         `;
 
         const result = await ai.models.generateContent({
-            model: "gemini-2.5-flash", 
+            model: "gemini-1.5-flash", 
             contents: context,
             config: {
                 temperature: 0.7,
@@ -84,7 +84,10 @@ export default async function handler(req: any, res: any) {
         });
 
     } catch (error: any) {
-        console.error("Ask API error:", error);
-        return res.status(500).json({ error: error.message || "Failed to get answer" });
+        console.error("AI Error:", error);
+        return res.status(error.status || 500).json({ 
+            error: "AI Handler failed",
+            details: error.message || "Unknown error"
+        });
     }
 }

@@ -62,6 +62,7 @@ export default async function handler(req: any, res: any) {
             - If it's Morning, suggest breakfast/coffee. 
             - If Evening/Night, suggest bars/dinner.
             - If Raining/Stormy, suggest indoor activities.
+            - CONCISENESS: Keep titles under 30 chars, descriptions under 100 chars, and each tag under 12 chars.
             
             Format: Raw JSON array of 12 objects following this exact schema:
             {
@@ -82,7 +83,7 @@ export default async function handler(req: any, res: any) {
         `;
 
         const response = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
+            model: "gemini-1.5-flash",
             contents: prompt,
             config: {
                 responseMimeType: "application/json",
@@ -106,6 +107,9 @@ export default async function handler(req: any, res: any) {
 
     } catch (error: any) {
         console.error("API ERROR:", error);
-        return res.status(500).json({ error: error.message || "Internal failure" });
+        return res.status(error.status || 500).json({ 
+            error: "Gemini API failure",
+            details: error.message || "Internal failure"
+        });
     }
 }

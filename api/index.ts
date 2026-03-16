@@ -5,6 +5,7 @@ import axios from "axios";
 import { neon } from "@neondatabase/serverless";
 import recommendationsHandler from "./recommendations";
 import askHandler from "./ask";
+import locationHandler from "./location";
 
 dotenv.config({ path: '.env.local' });
 
@@ -89,6 +90,7 @@ app.post('/api/auth/signup', async (req, res) => {
     }
 });
 
+app.get('/api/location', locationHandler);
 app.post('/api/recommendations', recommendationsHandler);
 app.post('/api/ask', askHandler);
 
@@ -163,7 +165,10 @@ app.post('/api/user/update', async (req, res) => {
         res.json({ user });
     } catch (err: any) {
         console.error("Update error:", err);
-        res.status(500).json({ error: "Detailed internal error" });
+        res.status(500).json({ 
+            error: "Detailed internal error during update",
+            details: err.message || "Unknown error"
+        });
     }
 });
 
