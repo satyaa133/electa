@@ -130,6 +130,8 @@ const SAMPLE_QUESTIONS: Record<string, string[]> = {
   ]
 };
 
+const normalizeTitle = (title: string) => title.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-');
+
 // --- Components ---
 
 const Modal = ({ isOpen, onClose, children }: { isOpen: boolean, onClose: () => void, children: React.ReactNode }) => (
@@ -620,15 +622,15 @@ export default function App() {
     if (!item) return;
 
     if (type === 'like') {
-      const title = item.title;
+      const titleKey = normalizeTitle(item.title);
       setLikedIds(prev => {
         const next = new Set(prev);
-        if (next.has(title)) next.delete(title);
+        if (next.has(titleKey)) next.delete(titleKey);
         else {
-          next.add(title);
+          next.add(titleKey);
           setDislikedIds(d => {
             const dn = new Set(d);
-            dn.delete(title);
+            dn.delete(titleKey);
             return dn;
           });
           setHistory(h => [...h, item.title].slice(-5));
@@ -638,15 +640,15 @@ export default function App() {
     }
 
     if (type === 'dislike') {
-      const title = item.title;
+      const titleKey = normalizeTitle(item.title);
       setDislikedIds(prev => {
         const next = new Set(prev);
-        if (next.has(title)) next.delete(title);
+        if (next.has(titleKey)) next.delete(titleKey);
         else {
-          next.add(title);
+          next.add(titleKey);
           setLikedIds(l => {
             const ln = new Set(l);
-            ln.delete(title);
+            ln.delete(titleKey);
             return ln;
           });
         }
