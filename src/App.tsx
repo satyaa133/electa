@@ -526,9 +526,15 @@ export default function App() {
           userHour: new Date().getHours()
         })
       });
-      const data = await response.json();
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`Recommendations API failed with status ${response.status}:`, errorText);
+        let errorData;
+        try { errorData = JSON.parse(errorText); } catch(e) {}
+        throw new Error(errorData?.error || "Failed to fetch recommendations");
+      }
       
-      if (data.error) throw new Error(data.error);
+      const data = await response.json();
       
       const recs = (data.recommendations || []).map((r: any) => ({
         ...r,
@@ -644,6 +650,11 @@ export default function App() {
           preferences: user.preferences,
           bookmarks: newBookmarks
         }),
+      }).then(async res => {
+        if (!res.ok) {
+           const text = await res.text();
+           console.error("User update failed:", text);
+        }
       }).catch(err => console.error("Failed to sync bookmark to server", err));
     }
 

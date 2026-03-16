@@ -3,9 +3,7 @@ import bcrypt from "bcryptjs";
 import dotenv from "dotenv";
 import axios from "axios";
 import { neon } from "@neondatabase/serverless";
-import recommendationsHandler from "./recommendations";
-import askHandler from "./ask";
-import locationHandler from "./location";
+import { GoogleGenAI } from "@google/genai";
 
 dotenv.config({ path: '.env.local' });
 
@@ -58,6 +56,136 @@ if (process.env.DATABASE_URL || process.env.POSTGRES_URL) {
     console.warn("⚠️ skipping initDB: Database URL missing.");
 }
 
+// --- API Handlers ---
+
+app.get('/api/location', async (req, res) => {
+    const forwarded = req.headers['x-forwarded-for'];
+    const clientIp = typeof forwarded === 'string' ? forwarded.split(',')[0] : (req.socket?.remoteAddress || req.ip || '');
+    
+    console.log(`[Location Service] Client IP identified: ${clientIp}`);
+
+    try {
+        // Try ipapi.co
+        try {
+            const url = clientIp && clientIp !== '::1' && clientIp !== '127.0.0.1' 
+                ? `https://ipapi.co/${clientIp}/json/` 
+                : 'https://ipapi.co/json/';
+                
+            const resp = await axios.get(url, { 
+                timeout: 5000,
+                headers: { 'User-Agent': 'node.js' }
+            });
+            if (resp.data && resp.data.city) {
+                const loc = resp.data.region ? `${resp.data.city}, ${resp.data.region}` : resp.data.city;
+                return res.json({ location: loc, source: 'ipapi.co', ip: clientIp });
+            }
+        } catch (e: any) {
+            console.warn(`[Location Service] ipapi.co failed: ${e.message}`);
+        }
+
+        // Fallback to ip-api.com
+        const url2 = clientIp && clientIp !== '::1' && clientIp !== '127.0.0.1'
+            ? `http://ip-api.com/json/${clientIp}`
+            : 'http://ip-api.com/json/';
+
+        const resp2 = await axios.get(url2, { timeout: 5000 });
+        if (resp2.data && resp2.data.city) {
+            const loc = resp2.data.regionName ? `${resp2.data.city}, ${resp2.data.regionName}` : resp2.data.city;
+            return res.json({ location: loc, source: 'ip-api.com', ip: clientIp });
+        }
+        
+        res.status(404).json({ error: "Location could not be determined from IP.", ip: clientIp });
+    } catch (err: any) {
+        console.error("Location fetch failed:", err);
+        res.status(500).json({ error: "Failed to fetch location", details: err.message });
+    }
+});
+
+app.post('/api/recommendations', async (req, res) => {
+    try {
+        const { mood, category, preferences, history, location, userHour } = req.body || {};
+        const apiKey = process.env.GEMINI_API_KEY;
+        
+        if (!apiKey) return res.status(500).json({ error: "GEMINI_API_KEY missing" });
+
+        let weather = "Clear";
+        let timeOfDay = "Day";
+        const hour = (userHour !== undefined && userHour !== null) ? userHour : new Date().getHours();
+
+        if (hour >= 5 && hour < 12) timeOfDay = "Morning";
+        else if (hour >= 12 && hour < 17) timeOfDay = "Afternoon";
+        else if (hour >= 17 && hour < 21) timeOfDay = "Evening";
+        else timeOfDay = "Late Night";
+
+        try {
+            const weatherRes = await axios.get(`https://wttr.in/${encodeURIComponent(location || "London")}?format=%C`, { timeout: 3000 });
+            weather = weatherRes.data || "Clear";
+        } catch (e) { }
+
+        const ai = new GoogleGenAI({ apiKey });
+        const prompt = `
+            Recommend 12 ${category} based on:
+            Mood: ${mood}, Location: ${location || "Unknown"}, Time: ${timeOfDay}, Weather: ${weather}
+            Preferences: ${(preferences || []).join(", ")}
+            
+            RULES:
+            - If it's Morning, suggest breakfast/coffee. 
+            - If Evening/Night, suggest bars/dinner.
+            - If Raining/Stormy, suggest indoor activities.
+            - CONCISENESS: Keep titles under 30 chars, descriptions under 100 chars, and each tag under 12 chars.
+            
+            Format: Raw JSON array of 12 objects with: id, title, description, category, reason, details (rating, year, address, tags[], link).
+            NO markdown, NO extra text.
+        `;
+
+        const result = await ai.models.generateContent({
+            model: "gemini-2.5-flash",
+            contents: prompt,
+            config: { responseMimeType: "application/json", temperature: 0.7 }
+        });
+
+        const text = result.text || "[]";
+        let recommendations = JSON.parse(text.match(/\[\s*\{[\s\S]*\}\s*\]/)?.[0] || text);
+
+        res.json({ recommendations: Array.isArray(recommendations) ? recommendations : [], context: { weather, timeOfDay } });
+    } catch (err: any) {
+        console.error("Rec API error:", err);
+        res.status(err.status || 500).json({ error: "Gemini API failure", details: err.message });
+    }
+});
+
+app.post('/api/ask', async (req, res) => {
+    try {
+        const { recommendation, question, chatHistory } = req.body || {};
+        if (!recommendation || !question) return res.status(400).json({ error: "Missing data" });
+
+        const apiKey = process.env.GEMINI_API_KEY;
+        if (!apiKey) return res.status(500).json({ error: "GEMINI_API_KEY missing" });
+
+        const ai = new GoogleGenAI({ apiKey });
+        const historyContext = (chatHistory || []).map((msg: any) => `${msg.role === 'user' ? 'User' : 'Electa'}: ${msg.content}`).join("\n");
+
+        const context = `
+            Context: Recommendation for ${recommendation.title}. 
+            Details: ${JSON.stringify(recommendation.details)}
+            User Question: ${question}
+            Prev History: ${historyContext}
+            Answer as Electa, concise and helpful. Add external links ONLY if truly needed.
+        `;
+
+        const result = await ai.models.generateContent({
+            model: "gemini-2.5-flash", 
+            contents: context,
+            config: { temperature: 0.7, maxOutputTokens: 1024 }
+        });
+
+        res.json({ answer: result.text || "No response", timestamp: new Date().toISOString() });
+    } catch (err: any) {
+        console.error("Ask API error:", err);
+        res.status(err.status || 500).json({ error: "AI Handler failed", details: err.message });
+    }
+});
+
 app.post('/api/auth/signup', async (req, res) => {
     const { email, password, name } = req.body;
     if (!email || !password || !name) {
@@ -90,9 +218,6 @@ app.post('/api/auth/signup', async (req, res) => {
     }
 });
 
-app.get('/api/location', locationHandler);
-app.post('/api/recommendations', recommendationsHandler);
-app.post('/api/ask', askHandler);
 
 app.post('/api/auth/login', async (req, res) => {
     const { email, password } = req.body;

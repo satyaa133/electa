@@ -14,7 +14,7 @@
         },
         {
             "source": "/api/location",
-            "destination": "/api/location.ts"
+            "destination": "/api/index.ts"
         },
         {
             "source": "/api/auth/(.*)",
