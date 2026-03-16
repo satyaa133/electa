@@ -542,6 +542,8 @@ export default function App() {
         details: r.details || {}
       }));
       setRecommendations(recs);
+      setLikedIds(new Set());
+      setDislikedIds(new Set());
       setRecCache(prev => ({ ...prev, [cacheKey]: recs }));
       if (data.context) {
         setApiContext(data.context);
@@ -631,9 +633,9 @@ export default function App() {
     }
 
     if (type === 'save' && user) {
-      const isBookmarked = user.bookmarks.some((b: any) => b.id === id);
+      const isBookmarked = user.bookmarks.some((b: any) => b.id === id || b.title === item.title);
       const newBookmarks = isBookmarked 
-        ? user.bookmarks.filter((b: any) => b.id !== id)
+        ? user.bookmarks.filter((b: any) => b.id !== id && b.title !== item.title)
         : [item, ...user.bookmarks];
       
       const updatedUser = { ...user, bookmarks: newBookmarks };
@@ -1177,7 +1179,7 @@ export default function App() {
                       onAsk={handleAsk}
                       isLiked={likedIds.has(rec.id)}
                       isDisliked={dislikedIds.has(rec.id)}
-                      isSaved={user?.bookmarks?.some(b => b.id === rec.id) || false}
+                      isSaved={user?.bookmarks?.some(b => b.id === rec.id || b.title === rec.title) || false}
                     />
                   ))}
                 </motion.div>
