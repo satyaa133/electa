@@ -162,7 +162,7 @@ app.post('/api/user/update', async (req, res) => {
       SET bio = ${bio || ''}, 
           profile_photo = ${profile_photo || ''}, 
           preferences = ${JSON.stringify(preferences || { genres: [], dietary: [], interests: [] })}, 
-          bookmarks = ${JSON.stringify(bookmarks || '[]')},
+          bookmarks = ${JSON.stringify(bookmarks || [])},
           location = ${location || ''}
       WHERE email = ${email}
     `;

@@ -6,11 +6,15 @@
     "rewrites": [
         {
             "source": "/api/recommendations",
-            "destination": "/api/recommendations.ts"
+            "destination": "/api/index.ts"
         },
         {
             "source": "/api/ask",
-            "destination": "/api/ask.ts"
+            "destination": "/api/index.ts"
+        },
+        {
+            "source": "/api/location",
+            "destination": "/api/index.ts"
         },
         {
             "source": "/api/auth/(.*)",
