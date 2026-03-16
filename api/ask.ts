@@ -67,7 +67,7 @@ export default async function handler(req: any, res: any) {
         `;
 
         const result = await ai.models.generateContent({
-            model: "gemini-2.5-flash", 
+            model: "gemini-1.5-flash", 
             contents: context,
             config: {
                 temperature: 0.7,

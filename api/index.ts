@@ -3,6 +3,8 @@ import bcrypt from "bcryptjs";
 import dotenv from "dotenv";
 import axios from "axios";
 import { neon } from "@neondatabase/serverless";
+import recommendationsHandler from "./recommendations";
+import askHandler from "./ask";
 
 dotenv.config({ path: '.env.local' });
 
@@ -109,6 +111,9 @@ app.get('/api/location', async (req, res) => {
         res.status(500).json({ error: "Failed to fetch location via IP" });
     }
 });
+
+app.post('/api/recommendations', recommendationsHandler);
+app.post('/api/ask', askHandler);
 
 app.post('/api/auth/login', async (req, res) => {
     const { email, password } = req.body;
