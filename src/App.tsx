@@ -325,8 +325,22 @@ export default function App() {
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
-  const [likedIds, setLikedIds] = useState<Set<string>>(new Set());
-  const [dislikedIds, setDislikedIds] = useState<Set<string>>(new Set());
+  const [likedIds, setLikedIds] = useState<Set<string>>(() => {
+    const saved = localStorage.getItem('electa_liked');
+    return saved ? new Set(JSON.parse(saved)) : new Set();
+  });
+  const [dislikedIds, setDislikedIds] = useState<Set<string>>(() => {
+    const saved = localStorage.getItem('electa_disliked');
+    return saved ? new Set(JSON.parse(saved)) : new Set();
+  });
+
+  useEffect(() => {
+    localStorage.setItem('electa_liked', JSON.stringify([...likedIds]));
+  }, [likedIds]);
+
+  useEffect(() => {
+    localStorage.setItem('electa_disliked', JSON.stringify([...dislikedIds]));
+  }, [dislikedIds]);
   const [history, setHistory] = useState<string[]>([]);
   const [location, setLocation] = useState<string | null>(() => {
     return user?.location || null;
@@ -550,8 +564,6 @@ export default function App() {
         details: r.details || {}
       }));
       setRecommendations(recs);
-      setLikedIds(new Set());
-      setDislikedIds(new Set());
       setRecCache(prev => ({ ...prev, [cacheKey]: recs }));
       if (data.context) {
         setApiContext(data.context);
@@ -608,14 +620,15 @@ export default function App() {
     if (!item) return;
 
     if (type === 'like') {
+      const title = item.title;
       setLikedIds(prev => {
         const next = new Set(prev);
-        if (next.has(id)) next.delete(id);
+        if (next.has(title)) next.delete(title);
         else {
-          next.add(id);
+          next.add(title);
           setDislikedIds(d => {
             const dn = new Set(d);
-            dn.delete(id);
+            dn.delete(title);
             return dn;
           });
           setHistory(h => [...h, item.title].slice(-5));
@@ -625,14 +638,15 @@ export default function App() {
     }
 
     if (type === 'dislike') {
+      const title = item.title;
       setDislikedIds(prev => {
         const next = new Set(prev);
-        if (next.has(id)) next.delete(id);
+        if (next.has(title)) next.delete(title);
         else {
-          next.add(id);
+          next.add(title);
           setLikedIds(l => {
             const ln = new Set(l);
-            ln.delete(id);
+            ln.delete(title);
             return ln;
           });
         }
@@ -1185,13 +1199,9 @@ export default function App() {
                       onClick={() => setSelectedRec(rec)}
                       onFeedback={handleFeedback}
                       onAsk={handleAsk}
-                      isLiked={likedIds.has(rec.id)}
-                      isDisliked={dislikedIds.has(rec.id)}
-                      isSaved={user?.bookmarks?.some(b => {
-                        const match = b.id === rec.id || b.title === rec.title;
-                        if (match) console.log(`[Debug] Match: "${rec.title}" matches bookmark "${b.title}" (ID match: ${b.id === rec.id}, Title match: ${b.title === rec.title})`);
-                        return match;
-                      }) || false}
+                      isLiked={likedIds.has(rec.title)}
+                      isDisliked={dislikedIds.has(rec.title)}
+                      isSaved={user?.bookmarks?.some(b => b.id === rec.id || b.title === rec.title) || false}
                     />
                   ))}
                 </motion.div>
