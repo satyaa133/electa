@@ -10,17 +10,19 @@ export default async function handler(req: any, res: any) {
             });
             if (resp.data && resp.data.city) {
                 const loc = resp.data.region ? `${resp.data.city}, ${resp.data.region}` : resp.data.city;
-                return res.json({ location: loc });
+                console.log(`[Location Service] IPAPI.co result: ${loc}`);
+                return res.json({ location: loc, source: 'ipapi.co' });
             }
-        } catch (e) {
-            console.warn("ipapi.co failed, trying ip-api.com...");
+        } catch (e: any) {
+            console.warn(`[Location Service] ipapi.co failed: ${e.message}`);
         }
 
         // Fallback to ip-api.com
         const resp2 = await axios.get('http://ip-api.com/json/', { timeout: 5000 });
         if (resp2.data && resp2.data.city) {
             const loc = resp2.data.regionName ? `${resp2.data.city}, ${resp2.data.regionName}` : resp2.data.city;
-            return res.json({ location: loc });
+            console.log(`[Location Service] IP-API.com result: ${loc}`);
+            return res.json({ location: loc, source: 'ip-api.com' });
         }
         
         res.status(404).json({ error: "Location could not be determined from IP." });
