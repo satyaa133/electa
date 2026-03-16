@@ -91,7 +91,9 @@ app.post('/api/auth/signup', async (req, res) => {
 
 app.get('/api/location', async (req, res) => {
     const forwarded = req.headers['x-forwarded-for'];
-    const clientIp = typeof forwarded === 'string' ? forwarded.split(',')[0] : req.socket.remoteAddress;
+    const clientIp = typeof forwarded === 'string' ? forwarded.split(',')[0] : (req.socket?.remoteAddress || req.ip || '');
+    
+    console.log(`[Location Service] Request IP: ${clientIp} | Headers: ${JSON.stringify(req.headers)}`);
     
     try {
         // Try ipapi.co with Client IP
