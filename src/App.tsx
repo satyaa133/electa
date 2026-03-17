@@ -130,7 +130,7 @@ const SAMPLE_QUESTIONS: Record<string, string[]> = {
   ]
 };
 
-const normalizeTitle = (title: string) => title.toLowerCase().trim().replace(/[^a-z0-9]+/g, '-');
+const normalizeTitle = (title: string) => (title || "").toLowerCase().trim().replace(/[^a-z0-9]+/g, '-');
 
 // --- Components ---
 
@@ -623,43 +623,48 @@ export default function App() {
 
     if (type === 'like') {
       const titleKey = normalizeTitle(item.title);
+      console.log(`[Sentiment] Like toggled for "${item.title}" (${titleKey})`);
+      
       setLikedIds(prev => {
         const next = new Set(prev);
         if (next.has(titleKey)) next.delete(titleKey);
-        else {
-          next.add(titleKey);
-          setDislikedIds(d => {
-            const dn = new Set(d);
-            dn.delete(titleKey);
-            return dn;
-          });
-          setHistory(h => [...h, item.title].slice(-5));
-        }
+        else next.add(titleKey);
         return next;
       });
+      
+      setDislikedIds(prev => {
+        const next = new Set(prev);
+        next.delete(titleKey);
+        return next;
+      });
+      
+      if (!likedIds.has(titleKey)) {
+        setHistory(h => [...h, item.title].slice(-5));
+      }
     }
 
     if (type === 'dislike') {
       const titleKey = normalizeTitle(item.title);
+      console.log(`[Sentiment] Dislike toggled for "${item.title}" (${titleKey})`);
+      
       setDislikedIds(prev => {
         const next = new Set(prev);
         if (next.has(titleKey)) next.delete(titleKey);
-        else {
-          next.add(titleKey);
-          setLikedIds(l => {
-            const ln = new Set(l);
-            ln.delete(titleKey);
-            return ln;
-          });
-        }
+        else next.add(titleKey);
+        return next;
+      });
+      
+      setLikedIds(prev => {
+        const next = new Set(prev);
+        next.delete(titleKey);
         return next;
       });
     }
 
     if (type === 'save' && user) {
-      const isBookmarked = user.bookmarks.some((b: any) => b.id === id || b.title === item.title);
+      const isBookmarked = user.bookmarks.some((b: any) => b.id === id || normalizeTitle(b.title) === normalizeTitle(item.title));
       const newBookmarks = isBookmarked 
-        ? user.bookmarks.filter((b: any) => b.id !== id && b.title !== item.title)
+        ? user.bookmarks.filter((b: any) => b.id !== id && normalizeTitle(b.title) !== normalizeTitle(item.title))
         : [item, ...user.bookmarks];
       
       const updatedUser = { ...user, bookmarks: newBookmarks };
@@ -1012,7 +1017,12 @@ export default function App() {
     <div className="min-h-screen bg-[#F8F9FA] dark:bg-zinc-950 text-zinc-900 dark:text-white font-sans overflow-x-hidden">
       {/* Header */}
       <header className="sticky top-0 z-30 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border-b border-zinc-100 dark:border-zinc-800 px-4 md:px-6 py-4">
-        <div className="max-w-7xl mx-auto flex items-center justify-between">
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+          className="max-w-7xl mx-auto flex items-center justify-between"
+        >
           <div className="flex items-center gap-3">
             <div className="p-2 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl">
               <Sparkles size={20} />
@@ -1070,12 +1080,22 @@ export default function App() {
               </button>
             </div>
           </div>
-        </div>
+        </motion.div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 md:px-6 py-8 md:py-12">
+      <motion.main
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.6, ease: "easeOut" }}
+        className="max-w-7xl mx-auto px-4 md:px-6 py-8 md:py-12"
+      >
         {/* Mood Section */}
-        <section className="mb-16">
+        <motion.section 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
+          className="mb-16"
+        >
           <div className="flex items-center justify-between mb-8">
             <div>
               <h2 className="text-2xl md:text-3xl font-bold text-zinc-900 dark:text-white tracking-tight mb-2">How are you feeling?</h2>
@@ -1114,10 +1134,15 @@ export default function App() {
               />
             ))}
           </div>
-        </section>
+        </motion.section>
 
         {/* Category Filter */}
-        <section className="mb-12">
+        <motion.section 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: 0.2 }}
+          className="mb-12"
+        >
           <div className="mb-4">
             <h3 className="text-lg md:text-xl font-bold text-zinc-900 dark:text-white">Select a Category</h3>
           </div>
@@ -1133,12 +1158,12 @@ export default function App() {
                     : "bg-white dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border border-zinc-100 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600"
                 )}
               >
-                <cat.icon size={18} />
+                <cat.icon size={16} />
                 {cat.label}
               </button>
             ))}
           </div>
-        </section>
+        </motion.section>
 
         {/* Recommendations Grid */}
         <section className="relative min-h-[400px]">
@@ -1201,9 +1226,9 @@ export default function App() {
                       onClick={() => setSelectedRec(rec)}
                       onFeedback={handleFeedback}
                       onAsk={handleAsk}
-                      isLiked={likedIds.has(rec.title)}
-                      isDisliked={dislikedIds.has(rec.title)}
-                      isSaved={user?.bookmarks?.some(b => b.id === rec.id || b.title === rec.title) || false}
+                      isLiked={likedIds.has(normalizeTitle(rec.title))}
+                      isDisliked={dislikedIds.has(normalizeTitle(rec.title))}
+                      isSaved={user?.bookmarks?.some(b => b.id === rec.id || normalizeTitle(b.title) === normalizeTitle(rec.title)) || false}
                     />
                   ))}
                 </motion.div>
@@ -1226,7 +1251,7 @@ export default function App() {
             )}
           </AnimatePresence>
         </section>
-      </main>
+      </motion.main>
 
       {/* Detail Modal */}
       <Modal isOpen={!!selectedRec} onClose={() => setSelectedRec(null)}>
