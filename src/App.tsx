@@ -61,6 +61,14 @@ const CATEGORIES = [
   { id: 'games', label: 'Games', icon: Gamepad2 },
 ];
 
+const FOOD_SUBCATEGORIES = [
+  { id: 'breakfast', label: 'Breakfast' },
+  { id: 'lunch', label: 'Lunch' },
+  { id: 'dinner', label: 'Dinner' },
+  { id: 'dessert', label: 'Dessert' },
+  { id: 'snacks', label: 'Snacks' }
+];
+
 const SAMPLE_QUESTIONS: Record<string, string[]> = {
   movies: [
     "Is this a good family movie?",
@@ -324,6 +332,7 @@ export default function App() {
   const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
   const [mood, setMood] = useState<string | null>(null);
   const [category, setCategory] = useState<string>('movies');
+  const [subCategory, setSubCategory] = useState<string | null>(null);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
@@ -526,7 +535,7 @@ export default function App() {
   const handleFetchRecommendations = React.useCallback(async (forceRefresh = false) => {
     if (!mood) return;
 
-    const cacheKey = `${mood}-${category}`;
+    const cacheKey = `${mood}-${category}-${subCategory || 'all'}`;
     if (!forceRefresh && recCache[cacheKey]) {
       setRecommendations(recCache[cacheKey]);
       setApiError(null);
@@ -544,6 +553,7 @@ export default function App() {
         body: JSON.stringify({
           mood,
           category,
+          subCategory,
           preferences: prefs,
           history,
           location: location || undefined,
@@ -581,7 +591,7 @@ export default function App() {
     } finally {
       setIsLoading(false);
     }
-  }, [mood, category, history, location, user, recCache]);
+  }, [mood, category, subCategory, history, location, user, recCache]);
 
   useEffect(() => {
     if (mood) {
@@ -590,7 +600,7 @@ export default function App() {
       }, 400); // 400ms debounce
       return () => clearTimeout(timer);
     }
-  }, [mood, category, location, user, history, handleFetchRecommendations]);
+  }, [mood, category, subCategory, location, user, history, handleFetchRecommendations]);
 
   const handleAsk = (rec: Recommendation) => {
     setChatTarget(rec);
@@ -1150,7 +1160,10 @@ export default function App() {
             {CATEGORIES.map((cat) => (
               <button
                 key={cat.id}
-                onClick={() => setCategory(cat.id)}
+                onClick={() => {
+                  setCategory(cat.id);
+                  setSubCategory(null);
+                }}
                 className={cn(
                   "flex items-center gap-2 px-4 py-2 md:px-6 md:py-3 rounded-2xl text-xs md:text-sm font-bold transition-all",
                   category === cat.id
@@ -1163,6 +1176,32 @@ export default function App() {
               </button>
             ))}
           </div>
+
+          <AnimatePresence>
+            {category === 'restaurants' && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                exit={{ opacity: 0, height: 0 }}
+                className="mt-6 flex flex-wrap items-center gap-3"
+              >
+                {FOOD_SUBCATEGORIES.map((sub) => (
+                  <button
+                    key={sub.id}
+                    onClick={() => setSubCategory(subCategory === sub.id ? null : sub.id)}
+                    className={cn(
+                      "px-4 py-2 rounded-xl text-xs font-bold transition-all border",
+                      subCategory === sub.id
+                        ? "bg-emerald-500 text-white border-emerald-400 shadow-md shadow-emerald-200 dark:shadow-emerald-900/10"
+                        : "bg-zinc-50 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border-zinc-100 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-700"
+                    )}
+                  >
+                    {sub.label}
+                  </button>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
         </motion.section>
 
         {/* Recommendations Grid */}

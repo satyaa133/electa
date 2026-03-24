@@ -103,7 +103,7 @@ app.get('/api/location', async (req, res) => {
 
 app.post('/api/recommendations', async (req, res) => {
     try {
-        const { mood, category, preferences, history, location, userHour } = req.body || {};
+        const { mood, category, preferences, history, location, userHour, subCategory } = req.body || {};
         const apiKey = process.env.GEMINI_API_KEY;
         
         if (!apiKey) return res.status(500).json({ error: "GEMINI_API_KEY missing" });
@@ -124,14 +124,16 @@ app.post('/api/recommendations', async (req, res) => {
 
         const ai = new GoogleGenAI({ apiKey });
         const prompt = `
-            Recommend 12 ${category} based on:
+            Recommend 12 ${subCategory ? `${subCategory} Restaurants` : 'Restaurants'} (Physical Venues) based on:
             Mood: ${mood}, Location: ${location || "Unknown"}, Time: ${timeOfDay}, Weather: ${weather}
             Preferences: ${(preferences || []).join(", ")}
             
             RULES:
-            - If it's Morning, suggest breakfast/coffee. 
-            - If Evening/Night, suggest bars/dinner.
-            - If Raining/Stormy, suggest indoor activities.
+            - The 'title' MUST be the name of a PHYSICAL ESTABLISHMENT (Restaurant, Cafe, Bar, etc.), NOT a dish name.
+            - If it's Morning, suggest breakfast/coffee spots. 
+            - If Evening/Night, suggest bars/dinner venues.
+            - If Raining/Stormy, suggest indoor dining.
+            ${(subCategory === 'lunch' || subCategory === 'dinner') ? '- IMPORTANT: Suggest ONLY established restaurants. NO small cafes, bistros, or coffee shops.' : ''}
             - CONCISENESS: Keep titles under 30 chars, descriptions under 100 chars, and each tag under 12 chars.
             
             Format: Raw JSON array of 12 objects with: id, title, description, category, reason, details (rating, year, address, tags[], link).

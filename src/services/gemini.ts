@@ -18,13 +18,14 @@ export async function getRecommendations(
   category: string,
   preferences: string[],
   history: string[],
-  location?: string
+  location?: string,
+  subCategory?: string | null
 ): Promise<Recommendation[]> {
   try {
     const response = await fetch('/api/recommendations', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mood, category, preferences, history, location })
+      body: JSON.stringify({ mood, category, preferences, history, location, subCategory })
     });
 
     if (!response.ok) {
