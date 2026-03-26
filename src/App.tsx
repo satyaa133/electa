@@ -379,20 +379,26 @@ export default function App() {
   });
 
   // Caching layer for recommendations
-  const [recCache, setRecCache] = useState<Record<string, Recommendation[]>>({});
+  const [recCache, setRecCache] = useState<Record<string, Recommendation[]>>(() => {
+    try {
+      const saved = localStorage.getItem('electa_rec_cache');
+      return saved ? JSON.parse(saved) : {};
+    } catch (e) { return {}; }
+  });
+
+  useEffect(() => {
+    localStorage.setItem('electa_rec_cache', JSON.stringify(recCache));
+  }, [recCache]);
+
   const [tagInputs, setTagInputs] = useState({ genres: '', dietary: '', interests: '' });
 
   // Theme hook - must be at top level before any conditional returns
   const { isDark, toggleTheme } = useTheme();
 
   useEffect(() => {
-    // Check if API server (port 3000 via proxy) is reachable
+    // Basic API health check
     fetch('/api/location')
-      .then(res => {
-        if (res.ok) console.log("✅ API Server Connection: OK");
-        else console.warn("⚠️ API Server returned error. Ensure 'npm run api' is running.");
-      })
-      .catch(() => console.error("❌ API Server Unreachable. Please run 'npm run api' in a separate terminal."));
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
@@ -438,37 +444,27 @@ export default function App() {
           bookmarks: user.bookmarks,
           location: newLoc
         }),
-      }).catch(err => console.error("Failed to sync location to server", err));
+      }).catch(() => {});
     }
   };
 
   const fetchIPLocation = async () => {
     try {
-      console.log("Fetching IP location from /api/location...");
       const response = await fetch('/api/location');
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`IP location API failed with status ${response.status}:`, errorText);
-        throw new Error("IP location failed");
-      }
+      if (!response.ok) return false;
       const data = await response.json();
       if (data.location) {
-        console.log("Internal IP Location found:", data.location);
         handleSetLocation(data.location || "Unknown City");
         return true;
       }
-    } catch (err) {
-      console.error("Internal IP Location fetch failed:", err);
-    }
+    } catch (err) {}
     return false;
   };
 
   const requestLocation = () => {
     setIsLocating(true);
-    console.log("Requesting location...");
 
     if (!navigator.geolocation) {
-      console.log("Geolocation not supported, trying IP fallback...");
       fetchIPLocation().then(success => {
         if (!success) handleSetLocation("Location not supported");
         setIsLocating(false);
@@ -479,7 +475,6 @@ export default function App() {
     navigator.geolocation.getCurrentPosition(
       async (pos) => {
         const { latitude, longitude } = pos.coords;
-        console.log(`Coordinates found: ${latitude}, ${longitude}`);
 
         try {
           const response = await fetch(
@@ -505,7 +500,6 @@ export default function App() {
 
           handleSetLocation(locString);
         } catch (err) {
-          console.error("Geocoding failed, trying IP fallback...", err);
           const success = await fetchIPLocation();
           if (!success) {
             setLocation(`${latitude.toFixed(2)}°, ${longitude.toFixed(2)}°`);
@@ -515,10 +509,8 @@ export default function App() {
         }
       },
       async (err) => {
-        console.warn("Location access error, trying IP fallback:", err.code, err.message);
         const success = await fetchIPLocation();
         if (!success) {
-          console.error("All location methods failed (Geolocation and IP Fallback).");
           handleSetLocation("Location unavailable");
         }
         setIsLocating(false);
@@ -557,14 +549,13 @@ export default function App() {
           preferences: prefs,
           history,
           location: location || undefined,
-          userHour: new Date().getHours()
+          userHour: new Date().getHours(),
+          refresh: forceRefresh
         })
       });
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error(`Recommendations API failed with status ${response.status}:`, errorText);
         let errorData;
-        try { errorData = JSON.parse(errorText); } catch(e) {}
+        try { const errorText = await response.text(); errorData = JSON.parse(errorText); } catch(e) {}
         throw new Error(errorData?.error || "Failed to fetch recommendations");
       }
       
@@ -633,7 +624,6 @@ export default function App() {
 
     if (type === 'like') {
       const titleKey = normalizeTitle(item.title);
-      console.log(`[Sentiment] Like toggled for "${item.title}" (${titleKey})`);
       
       setLikedIds(prev => {
         const next = new Set(prev);
@@ -655,7 +645,6 @@ export default function App() {
 
     if (type === 'dislike') {
       const titleKey = normalizeTitle(item.title);
-      console.log(`[Sentiment] Dislike toggled for "${item.title}" (${titleKey})`);
       
       setDislikedIds(prev => {
         const next = new Set(prev);
@@ -691,15 +680,8 @@ export default function App() {
           preferences: user.preferences,
           bookmarks: newBookmarks
         }),
-      }).then(async res => {
-        if (!res.ok) {
-           const text = await res.text();
-           console.error("User update failed:", text);
-        }
-      }).catch(err => console.error("Failed to sync bookmark to server", err));
+      }).catch(() => {});
     }
-
-    console.log(`Feedback for ${id}: ${type}`);
   };
 
   const [authForm, setAuthForm] = useState({ email: '', password: '', name: '' });
@@ -1230,9 +1212,12 @@ export default function App() {
                     <div className="w-20 h-20 bg-rose-50 dark:bg-rose-900/30 rounded-full flex items-center justify-center text-rose-500 mb-6 relative">
                       <Hourglass size={32} className="relative z-10 animate-[spin_3s_ease-in-out_infinite]" />
                     </div>
-                    <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">Cool Down Active</h3>
-                    <p className="text-zinc-500 dark:text-zinc-400 font-mono text-xs mt-1">
-                      Try after some hours
+                    <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">API Limit Reached</h3>
+                    <p className="max-w-xs text-zinc-500 dark:text-zinc-400 font-medium text-sm mt-2">
+                      The AI is currently at capacity. This happens when the free-tier rate limit is reached.
+                    </p>
+                    <p className="text-zinc-400 dark:text-zinc-500 font-mono text-[10px] uppercase tracking-widest mt-4">
+                      Please try again in a few minutes.
                     </p>
                   </motion.div>
                 ) : (

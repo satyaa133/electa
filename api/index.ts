@@ -16,6 +16,13 @@ const sql = (strings: TemplateStringsArray, ...values: any[]) => {
     return neon(url)(strings, ...values);
 };
 
+function getApiKey() {
+    const rawKeys = process.env.GEMINI_API_KEY || "";
+    const apiKeys = rawKeys.split(",").map(k => k.trim()).filter(k => k.length > 0);
+    if (apiKeys.length === 0) return null;
+    return apiKeys[Math.floor(Math.random() * apiKeys.length)];
+}
+
 const app = express();
 
 app.use((req, res, next) => {
@@ -41,9 +48,15 @@ async function initDB() {
         location TEXT DEFAULT ''
       )
     `;
-        try {
-            await sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS location TEXT DEFAULT ''`;
-        } catch (e) { }
+        await sql`
+      CREATE TABLE IF NOT EXISTS recommendations_cache (
+        id SERIAL PRIMARY KEY,
+        cache_key TEXT UNIQUE NOT NULL,
+        data TEXT NOT NULL,
+        context TEXT,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+      )
+    `;
         console.log("Database initialized successfully.");
     } catch (error) {
         console.error("Failed to initialize database:", error);
@@ -62,8 +75,6 @@ app.get('/api/location', async (req, res) => {
     const forwarded = req.headers['x-forwarded-for'];
     const clientIp = typeof forwarded === 'string' ? forwarded.split(',')[0] : (req.socket?.remoteAddress || req.ip || '');
     
-    console.log(`[Location Service] Client IP identified: ${clientIp}`);
-
     try {
         // Try ipapi.co
         try {
@@ -79,9 +90,7 @@ app.get('/api/location', async (req, res) => {
                 const loc = resp.data.region ? `${resp.data.city}, ${resp.data.region}` : resp.data.city;
                 return res.json({ location: loc, source: 'ipapi.co', ip: clientIp });
             }
-        } catch (e: any) {
-            console.warn(`[Location Service] ipapi.co failed: ${e.message}`);
-        }
+        } catch (e: any) {}
 
         // Fallback to ip-api.com
         const url2 = clientIp && clientIp !== '::1' && clientIp !== '127.0.0.1'
@@ -103,8 +112,8 @@ app.get('/api/location', async (req, res) => {
 
 app.post('/api/recommendations', async (req, res) => {
     try {
-        const { mood, category, preferences, history, location, userHour, subCategory } = req.body || {};
-        const apiKey = process.env.GEMINI_API_KEY;
+        const { mood, category, preferences, history, location, userHour, subCategory, refresh } = req.body || {};
+        const apiKey = getApiKey();
         
         if (!apiKey) return res.status(500).json({ error: "GEMINI_API_KEY missing" });
 
@@ -121,6 +130,48 @@ app.post('/api/recommendations', async (req, res) => {
             const weatherRes = await axios.get(`https://wttr.in/${encodeURIComponent(location || "London")}?format=%C`, { timeout: 3000 });
             weather = weatherRes.data || "Clear";
         } catch (e) { }
+
+        // --- Cache Check ---
+        const cacheKey = `rec:${category}:${subCategory || 'all'}:${mood}:${location || 'global'}`.toLowerCase();
+        
+        if (!refresh) {
+            try {
+                const cached = await sql`
+                    SELECT data, context, created_at 
+                    FROM recommendations_cache 
+                    WHERE cache_key = ${cacheKey} 
+                    AND created_at > NOW() - INTERVAL '24 hours'
+                    LIMIT 1
+            `;
+            if (cached.length > 0) {
+                const createdAt = new Date(cached[0].created_at);
+                const ageMs = Date.now() - createdAt.getTime();
+                const ageHours = ageMs / (1000 * 60 * 60);
+
+                // Probabilistic bypass for freshness
+                let shouldBypass = false;
+                const rand = Math.random();
+                if (ageHours > 1 && ageHours < 6 && rand < 0.2) shouldBypass = true;
+                else if (ageHours >= 6 && rand < 0.5) shouldBypass = true;
+
+                if (!shouldBypass) {
+                    console.log(`[Cache Hit] Serving recommendations for: ${cacheKey} (${Math.round(ageHours * 10) / 10}h old)`);
+                    return res.json({ 
+                        recommendations: JSON.parse(cached[0].data), 
+                        context: JSON.parse(cached[0].context || '{"weather":"Clear","timeOfDay":"Day"}'),
+                        cached: true 
+                    });
+                } else {
+                    console.log(`[Cache Probabilistic Bypass] Refreshing data (${Math.round(ageHours * 10) / 10}h old) for: ${cacheKey}`);
+                }
+            }
+        } catch (err) {
+            console.error("[Cache Error] Check failed:", err);
+        }
+        } else {
+            console.log(`[Cache Manual Bypass] Force refresh for: ${cacheKey}`);
+        }
+        // --- End Cache Check ---
 
         const ai = new GoogleGenAI({ apiKey });
         const prompt = `
@@ -156,6 +207,23 @@ app.post('/api/recommendations', async (req, res) => {
             });
         }
 
+        // --- Cache Store ---
+        try {
+            await sql`
+                INSERT INTO recommendations_cache (cache_key, data, context)
+                VALUES (${cacheKey}, ${JSON.stringify(recommendations)}, ${JSON.stringify({ weather, timeOfDay })})
+                ON CONFLICT (cache_key) 
+                DO UPDATE SET 
+                    data = EXCLUDED.data, 
+                    context = EXCLUDED.context, 
+                    created_at = CURRENT_TIMESTAMP
+            `;
+            console.log(`[Cache Store] Recommendations saved for: ${cacheKey}`);
+        } catch (err) {
+            console.error("[Cache Error] Store failed:", err);
+        }
+        // --- End Cache Store ---
+
         res.json({ recommendations: Array.isArray(recommendations) ? recommendations : [], context: { weather, timeOfDay } });
     } catch (err: any) {
         console.error("Rec API error:", err);
@@ -168,7 +236,7 @@ app.post('/api/ask', async (req, res) => {
         const { recommendation, question, chatHistory } = req.body || {};
         if (!recommendation || !question) return res.status(400).json({ error: "Missing data" });
 
-        const apiKey = process.env.GEMINI_API_KEY;
+        const apiKey = getApiKey();
         if (!apiKey) return res.status(500).json({ error: "GEMINI_API_KEY missing" });
 
         const ai = new GoogleGenAI({ apiKey });
