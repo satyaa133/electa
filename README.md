@@ -21,9 +21,3 @@ Electa is a premium AI discovery platform that recommends movies, music, books, 
 - **Backend**: Node.js (Express), Vercel Serverless
 - **AI**: Google Gemini 2.0 Flash
 - **Database**: Neon PostgreSQL
-
-## 📂 Project Highlights
-
-- **Fast**: Sub-500ms response times for cached queries.
-- **Resilient**: Graceful handling of API rate limits and database latency.
-- **Personal**: Memory-mapped sentiment (Likes/Dislikes) across all categories.
