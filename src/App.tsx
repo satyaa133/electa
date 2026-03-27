@@ -1145,6 +1145,7 @@ export default function App() {
                 onClick={() => {
                   setCategory(cat.id);
                   setSubCategory(null);
+                  setApiError(null);
                 }}
                 className={cn(
                   "flex items-center gap-2 px-4 py-2 md:px-6 md:py-3 rounded-2xl text-xs md:text-sm font-bold transition-all",

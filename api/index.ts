@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import dotenv from "dotenv";
 import axios from "axios";
 import { neon } from "@neondatabase/serverless";
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenerativeAI } from "@google/generative-ai";
 
 dotenv.config({ path: '.env.local' });
 
@@ -18,7 +18,7 @@ const sql = (strings: TemplateStringsArray, ...values: any[]) => {
 
 function getApiKey() {
     const rawKeys = process.env.GEMINI_API_KEY || "";
-    const apiKeys = rawKeys.split(",").map(k => k.trim()).filter(k => k.length > 0);
+    const apiKeys = rawKeys.split(",").map(k => k.trim().replace(/^["']|["']$/g, '')).filter(k => k.length > 0);
     if (apiKeys.length === 0) return null;
     return apiKeys[Math.floor(Math.random() * apiKeys.length)];
 }
@@ -113,6 +113,17 @@ app.get('/api/location', async (req, res) => {
 app.post('/api/recommendations', async (req, res) => {
     try {
         const { mood, category, preferences, history, location, userHour, subCategory, refresh } = req.body || {};
+        
+        // Filter preferences for current category context
+        const genreWords = ['action', 'comedy', 'drama', 'sci-fi', 'horror', 'romance', 'thriller', 'mystery'];
+        const foodWords = ['pasta', 'pizza', 'sushi', 'burger', 'vegan', 'steak', 'coffee', 'breakfast', 'lunch', 'dinner'];
+        const bookWords = ['fiction', 'novel', 'biography', 'history', 'fantasy', 'poem'];
+        
+        let filteredPrefs = (preferences || []);
+        if (category === 'movies') filteredPrefs = filteredPrefs.filter((p: string) => genreWords.some(w => p.toLowerCase().includes(w)));
+        if (category === 'restaurants' || category === 'food') filteredPrefs = filteredPrefs.filter((p: string) => foodWords.some(w => p.toLowerCase().includes(w)));
+        if (category === 'books') filteredPrefs = filteredPrefs.filter((p: string) => bookWords.some(w => p.toLowerCase().includes(w)));
+
         const apiKey = getApiKey();
         
         if (!apiKey) return res.status(500).json({ error: "GEMINI_API_KEY missing" });
@@ -172,32 +183,61 @@ app.post('/api/recommendations', async (req, res) => {
             console.log(`[Cache Manual Bypass] Force refresh for: ${cacheKey}`);
         }
         // --- End Cache Check ---
+        
+        let targetType = "items";
+        let specialRules = "";
 
-        const ai = new GoogleGenAI({ apiKey });
+        if (category === 'movies' || category === 'movie') {
+            targetType = "Movies";
+            specialRules = "- Suggest popular or critically acclaimed films.\n- Include 'year' and 'rating' in details.";
+        } else if (category === 'music') {
+            targetType = "Albums/Artists";
+            specialRules = "- Suggest specific albums or artists.\n- Include 'year' and 'genres' in details.";
+        } else if (category === 'books' || category === 'book') {
+            targetType = "Books";
+            specialRules = "- Suggest specific book titles and authors.\n- Include 'year' and 'rating' in details.";
+        } else if (category === 'restaurants' || category === 'food' || category === 'restaurant') {
+            targetType = subCategory ? `${subCategory} Restaurants` : 'Restaurants (Physical Venues)';
+            specialRules = `- The 'title' MUST be the name of a PHYSICAL ESTABLISHMENT.\n- If it's Morning, suggest breakfast/coffee spots.\n- If Evening/Night, suggest bars/dinner venues.\n- If Raining/Stormy, suggest indoor dining.\n${(subCategory === 'lunch' || subCategory === 'dinner') ? '- IMPORTANT: Suggest ONLY established restaurants. NO small cafes, bistros, or coffee shops.' : ''}`;
+        } else if (category === 'games' || category === 'game') {
+            targetType = "Video Games";
+            specialRules = "- Suggest modern or classic video games.\n- Include 'platform' and 'rating' in details.";
+        }
+
         const prompt = `
-            Recommend 12 ${subCategory ? `${subCategory} Restaurants` : 'Restaurants'} (Physical Venues) based on:
-            Mood: ${mood}, Location: ${location || "Unknown"}, Time: ${timeOfDay}, Weather: ${weather}
-            Preferences: ${(preferences || []).join(", ")}
+            Recommend 12 ${targetType} based on:
+            Mood: ${mood}, Location: ${location || "Unknown City"}, Time: ${timeOfDay}, Weather: ${weather}
+            Preferences: ${(filteredPrefs || []).join(", ")}
             
             RULES:
-            - The 'title' MUST be the name of a PHYSICAL ESTABLISHMENT (Restaurant, Cafe, Bar, etc.), NOT a dish name.
-            - If it's Morning, suggest breakfast/coffee spots. 
-            - If Evening/Night, suggest bars/dinner venues.
-            - If Raining/Stormy, suggest indoor dining.
-            ${(subCategory === 'lunch' || subCategory === 'dinner') ? '- IMPORTANT: Suggest ONLY established restaurants. NO small cafes, bistros, or coffee shops.' : ''}
-            - CONCISENESS: Keep titles under 30 chars, descriptions under 100 chars, and each tag under 12 chars.
-            
-            Format: Raw JSON array of 12 objects with: id, title, description, category, reason, details (rating, year, address, tags[], link).
-            NO markdown, NO extra text.
+            ${specialRules}
+            - CRITICAL: Every single recommendation MUST be a ${targetType}. 
+            - DO NOT suggest Restaurants if the category is Movies, Music, Books, or Games.
+            - DO NOT suggest Movies if the category is Restaurants, Music, Books, or Games.
+            - Format: Raw JSON array of 12 objects with: id, title, description, category (set to '${category}'), reason, details (rating, year, address, tags[], link).
+            - NO markdown, NO extra text.
         `;
+        let systemInstruction = "You are Electa, a precise recommendation engine.";
+        if (category === 'movies') {
+            systemInstruction = "You are Electa's Movie Expert. Suggest ONLY films. NEVER suggest restaurants, books, or music. Include year and rating.";
+        } else if (category === 'restaurants' || category === 'food') {
+            systemInstruction = "You are Electa's Food Guide. Suggest ONLY physical restaurants and venues. NEVER suggest movies or music.";
+        } else if (category === 'music') {
+            systemInstruction = "You are Electa's Music Guru. Suggest ONLY albums or artists. NEVER suggest restaurants or movies.";
+        }
 
-        const result = await ai.models.generateContent({
-            model: "gemini-2.5-flash",
-            contents: prompt,
-            config: { responseMimeType: "application/json", temperature: 0.7 }
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const modelInstance = genAI.getGenerativeModel({ 
+            model: "gemini-flash-latest",
+            systemInstruction: systemInstruction,
+            generationConfig: { responseMimeType: "application/json", temperature: 0.7 }
         });
 
-        const text = result.text || "[]";
+        console.log(`[API] Fetching ${targetType} for mood ${mood}...`);
+
+        const result = await modelInstance.generateContent(prompt);
+        const response = await result.response;
+        const text = response.text();
         let recommendations = JSON.parse(text.match(/\[\s*\{[\s\S]*\}\s*\]/)?.[0] || text);
 
         if (Array.isArray(recommendations)) {
@@ -239,7 +279,8 @@ app.post('/api/ask', async (req, res) => {
         const apiKey = getApiKey();
         if (!apiKey) return res.status(500).json({ error: "GEMINI_API_KEY missing" });
 
-        const ai = new GoogleGenAI({ apiKey });
+        const genAI = new GoogleGenerativeAI(apiKey);
+        const modelInstance = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
         const historyContext = (chatHistory || []).map((msg: any) => `${msg.role === 'user' ? 'User' : 'Electa'}: ${msg.content}`).join("\n");
 
         const context = `
@@ -250,13 +291,11 @@ app.post('/api/ask', async (req, res) => {
             Answer as Electa, concise and helpful. Add external links ONLY if truly needed.
         `;
 
-        const result = await ai.models.generateContent({
-            model: "gemini-2.5-flash", 
-            contents: context,
-            config: { temperature: 0.7, maxOutputTokens: 1024 }
-        });
+        const result = await modelInstance.generateContent(context);
+        const response = await result.response;
+        const text = response.text();
 
-        res.json({ answer: result.text || "No response", timestamp: new Date().toISOString() });
+        res.json({ answer: text || "No response", timestamp: new Date().toISOString() });
     } catch (err: any) {
         console.error("Ask API error:", err);
         res.status(err.status || 500).json({ error: "AI Handler failed", details: err.message });
