@@ -16,11 +16,85 @@ const sql = (strings: TemplateStringsArray, ...values: any[]) => {
     return neon(url)(strings, ...values);
 };
 
-function getApiKey() {
-    const rawKeys = process.env.GEMINI_API_KEY || "";
-    const apiKeys = rawKeys.split(",").map(k => k.trim().replace(/^["']|["']$/g, '')).filter(k => k.length > 0);
-    if (apiKeys.length === 0) return null;
-    return apiKeys[Math.floor(Math.random() * apiKeys.length)];
+// --- API Key Management (Stateful Rotation) ---
+class KeyManager {
+    private keys: string[];
+    private currentIndex: number = 0;
+    private cooldowns: Map<string, number> = new Map();
+
+    constructor() {
+        const rawKeys = process.env.GEMINI_API_KEY || "";
+        this.keys = rawKeys.split(",")
+            .map(k => k.trim().replace(/^["']|["']$/g, ''))
+            .filter(k => k.length > 0);
+    }
+
+    getNextKey(): string | null {
+        if (this.keys.length === 0) return null;
+        
+        const now = Date.now();
+        // Skip keys in cooldown
+        for (let i = 0; i < this.keys.length; i++) {
+            const index = (this.currentIndex + i) % this.keys.length;
+            const key = this.keys[index];
+            const cooldownUntil = this.cooldowns.get(key) || 0;
+            
+            if (now > cooldownUntil) {
+                this.currentIndex = (index + 1) % this.keys.length;
+                return key;
+            }
+        }
+        
+        // All keys in cooldown? Returns the next one anyway to try (or could return null)
+        const key = this.keys[this.currentIndex];
+        this.currentIndex = (this.currentIndex + 1) % this.keys.length;
+        return key;
+    }
+
+    markAsExhausted(key: string) {
+        console.warn(`[KeyManager] Key exhausted, cooling down for 60s: ${key.substring(0, 8)}...`);
+        this.cooldowns.set(key, Date.now() + 60000); // 1 minute cooldown
+    }
+
+    get totalKeys() { return this.keys.length; }
+}
+
+const keyManager = new KeyManager();
+
+async function generateContentWithRetry(genFunc: (apiKey: string) => Promise<any>, maxRetries = 3) {
+    let lastError: any = null;
+    const totalPossible = Math.max(maxRetries, keyManager.totalKeys || 1);
+    
+    for (let i = 0; i < totalPossible; i++) {
+        const apiKey = keyManager.getNextKey();
+        if (!apiKey) throw new Error("No API keys available");
+        
+        try {
+            const result = await genFunc(apiKey);
+            // Force await response to catch quota/overload errors here
+            await result.response;
+            return result;
+        } catch (err: any) {
+            lastError = err;
+            const status = err.status || err.response?.status;
+            const errMsg = err.message?.toLowerCase() || "";
+            
+            const isRetriable = status === 429 || status === 503 || 
+                               errMsg.includes("429") || errMsg.includes("503") || 
+                               errMsg.includes("quota") || errMsg.includes("overloaded") || 
+                               errMsg.includes("demand");
+
+            if (isRetriable) {
+                if (status === 429 || errMsg.includes("quota")) {
+                    keyManager.markAsExhausted(apiKey);
+                }
+                console.warn(`[Retry] Attempt ${i + 1} failed (${status || 'error'}). Switching keys...`);
+                continue; 
+            }
+            throw err; 
+        }
+    }
+    throw lastError;
 }
 
 const app = express();
@@ -124,10 +198,6 @@ app.post('/api/recommendations', async (req, res) => {
         if (category === 'restaurants' || category === 'food') filteredPrefs = filteredPrefs.filter((p: string) => foodWords.some(w => p.toLowerCase().includes(w)));
         if (category === 'books') filteredPrefs = filteredPrefs.filter((p: string) => bookWords.some(w => p.toLowerCase().includes(w)));
 
-        const apiKey = getApiKey();
-        
-        if (!apiKey) return res.status(500).json({ error: "GEMINI_API_KEY missing" });
-
         let weather = "Clear";
         let timeOfDay = "Day";
         const hour = (userHour !== undefined && userHour !== null) ? userHour : new Date().getHours();
@@ -226,16 +296,16 @@ app.post('/api/recommendations', async (req, res) => {
             systemInstruction = "You are Electa's Music Guru. Suggest ONLY albums or artists. NEVER suggest restaurants or movies.";
         }
 
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const modelInstance = genAI.getGenerativeModel({ 
-            model: "gemini-flash-latest",
-            systemInstruction: systemInstruction,
-            generationConfig: { responseMimeType: "application/json", temperature: 0.7 }
+        const result = await generateContentWithRetry(async (key) => {
+            const genAI = new GoogleGenerativeAI(key);
+            const modelInstance = genAI.getGenerativeModel({ 
+                model: "gemini-flash-latest",
+                systemInstruction: systemInstruction,
+                generationConfig: { responseMimeType: "application/json", temperature: 0.7 }
+            });
+            return await modelInstance.generateContent(prompt);
         });
 
-        console.log(`[API] Fetching ${targetType} for mood ${mood}...`);
-
-        const result = await modelInstance.generateContent(prompt);
         const response = await result.response;
         const text = response.text();
         let recommendations = JSON.parse(text.match(/\[\s*\{[\s\S]*\}\s*\]/)?.[0] || text);
@@ -276,22 +346,20 @@ app.post('/api/ask', async (req, res) => {
         const { recommendation, question, chatHistory } = req.body || {};
         if (!recommendation || !question) return res.status(400).json({ error: "Missing data" });
 
-        const apiKey = getApiKey();
-        if (!apiKey) return res.status(500).json({ error: "GEMINI_API_KEY missing" });
+        const result = await generateContentWithRetry(async (key) => {
+            const genAI = new GoogleGenerativeAI(key);
+            const modelInstance = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
+            const historyContext = (chatHistory || []).map((msg: any) => `${msg.role === 'user' ? 'User' : 'Electa'}: ${msg.content}`).join("\n");
 
-        const genAI = new GoogleGenerativeAI(apiKey);
-        const modelInstance = genAI.getGenerativeModel({ model: "gemini-flash-latest" });
-        const historyContext = (chatHistory || []).map((msg: any) => `${msg.role === 'user' ? 'User' : 'Electa'}: ${msg.content}`).join("\n");
-
-        const context = `
-            Context: Recommendation for ${recommendation.title}. 
-            Details: ${JSON.stringify(recommendation.details)}
-            User Question: ${question}
-            Prev History: ${historyContext}
-            Answer as Electa, concise and helpful. Add external links ONLY if truly needed.
-        `;
-
-        const result = await modelInstance.generateContent(context);
+            const context = `
+                Context: Recommendation for ${recommendation.title}. 
+                Details: ${JSON.stringify(recommendation.details)}
+                User Question: ${question}
+                Prev History: ${historyContext}
+                Answer as Electa, concise and helpful. Add external links ONLY if truly needed.
+            `;
+            return await modelInstance.generateContent(context);
+        });
         const response = await result.response;
         const text = response.text();
 
