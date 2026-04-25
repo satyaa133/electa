@@ -815,7 +815,11 @@ export default function App() {
 
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
-      if (event.origin !== window.location.origin) return;
+      // Robust origin check for development
+      const isSameOrigin = event.origin === window.location.origin;
+      const isLocalhostMatch = event.origin.includes('localhost') && window.location.origin.includes('localhost');
+      
+      if (!isSameOrigin && !isLocalhostMatch) return;
 
       if (event.data?.type === 'OAUTH_SUCCESS') {
         setUser(event.data.user);
@@ -959,21 +963,6 @@ export default function App() {
                 {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Github size={18} />} GitHub
               </button>
             </div>
-
-            <button
-              onClick={() => setUser({
-                name: 'Guest User',
-                email: 'guest@example.com',
-                bio: 'Exploring Electa as a guest.',
-                profile_photo: '',
-                preferences: { genres: [], dietary: [], interests: [] },
-                bookmarks: []
-              })}
-              className="w-full mt-4 py-3 bg-zinc-50 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 rounded-2xl text-sm font-bold hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-all border border-zinc-100 dark:border-zinc-700"
-            >
-              Continue as Guest
-            </button>
-
             <p className="mt-6 text-center text-sm text-zinc-500 dark:text-zinc-400">
               {authMode === 'login' ? "Don't have an account?" : "Already have an account?"} {' '}
               <button

@@ -1,11 +1,11 @@
 import express from "express";
-import bcrypt from "bcryptjs";
 import dotenv from "dotenv";
+dotenv.config({ path: '.env.local' });
+import bcrypt from "bcryptjs";
 import axios from "axios";
 import { neon } from "@neondatabase/serverless";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-dotenv.config({ path: '.env.local' });
 
 const sql = (strings: TemplateStringsArray, ...values: any[]) => {
     const url = process.env.DATABASE_URL || process.env.POSTGRES_URL;
@@ -481,16 +481,22 @@ app.post('/api/user/update', async (req, res) => {
     }
 });
 
-const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;
-const GOOGLE_CLIENT_SECRET = process.env.GOOGLE_CLIENT_SECRET;
-const GITHUB_CLIENT_ID = process.env.GITHUB_CLIENT_ID;
-const GITHUB_CLIENT_SECRET = process.env.GITHUB_CLIENT_SECRET;
+// OAuth credentials will be read inside handlers
 
 app.get('/api/auth/google/url', (req, res) => {
     const origin = req.query.origin as string || '*';
-    const redirectUri = origin === '*' ? `${req.protocol}://${req.get('host')}/api/auth/google/callback` : `${origin}/api/auth/google/callback`;
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    
+    if (!clientId) {
+        console.error("[Auth] GOOGLE_CLIENT_ID is missing in environment");
+        return res.status(500).json({ error: "Google Client ID not configured on server" });
+    }
+
+    const redirectUri = origin === '*' ? `${req.protocol}://${req.get('host')}/api/auth/google/callback` : `${origin.replace(/\/$/, '')}/api/auth/google/callback`;
     const state = Buffer.from(JSON.stringify({ origin })).toString('base64');
-    const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${GOOGLE_CLIENT_ID}&redirect_uri=${redirectUri}&response_type=code&scope=email profile&state=${state}`;
+    const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=email profile&state=${state}`;
+    
+    console.log(`[Auth] Generated Google URL for origin: ${origin}`);
     res.json({ url });
 });
 
@@ -505,15 +511,33 @@ app.get('/api/auth/google/callback', async (req, res) => {
         return res.send(`<script>window.opener.postMessage({ type: 'OAUTH_CANCELLED' }, "${origin}");window.close();</script>`);
     }
 
-    const redirectUri = origin === '*' ? `${req.protocol}://${req.get('host')}/api/auth/google/callback` : `${origin}/api/auth/google/callback`;
+    const clientId = process.env.GOOGLE_CLIENT_ID;
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+
+    const redirectUri = origin === '*' ? `${req.protocol}://${req.get('host')}/api/auth/google/callback` : `${origin.replace(/\/$/, '')}/api/auth/google/callback`;
 
     try {
         const tokenRes = await axios.post('https://oauth2.googleapis.com/token', {
-            client_id: GOOGLE_CLIENT_ID, client_secret: GOOGLE_CLIENT_SECRET, code, grant_type: 'authorization_code', redirect_uri: redirectUri
+            client_id: clientId, 
+            client_secret: clientSecret, 
+            code, 
+            grant_type: 'authorization_code', 
+            redirect_uri: redirectUri
+        }, {
+            headers: { 'User-Agent': 'node.js' }
         });
         const access_token = tokenRes.data.access_token;
-        const userRes = await axios.get('https://www.googleapis.com/oauth2/v2/userinfo', { headers: { Authorization: `Bearer ${access_token}` } });
+        if (!access_token) throw new Error('No access token received from Google');
+
+        const userRes = await axios.get('https://www.googleapis.com/oauth2/v2/userinfo', { 
+            headers: { 
+                Authorization: `Bearer ${access_token}`,
+                'User-Agent': 'node.js'
+            } 
+        });
         const { email, name, picture } = userRes.data;
+
+        if (!email) throw new Error('No email received from Google');
 
         let rows = await sql`SELECT * FROM users WHERE email = ${email}`;
         if (rows.length === 0) {
@@ -528,16 +552,27 @@ app.get('/api/auth/google/callback', async (req, res) => {
             location: userRecord.location || ''
         };
         res.send(`<script>window.opener.postMessage({ type: 'OAUTH_SUCCESS', user: ${JSON.stringify(user)} }, "${origin}");window.close();</script>`);
-    } catch (err) {
-        console.error("Google OAuth Error", err);
-        res.send(`<script>window.opener.postMessage({ type: 'OAUTH_ERROR', error: 'Google Authentication Failed' }, "${origin}");window.close();</script>`);
+    } catch (err: any) {
+        console.error("Google OAuth Error:", err.response?.data || err.message);
+        const errorMsg = err.response?.data?.error_description || err.message || 'Google Authentication Failed';
+        res.send(`<script>window.opener.postMessage({ type: 'OAUTH_ERROR', error: ${JSON.stringify(errorMsg)} }, "${origin}");window.close();</script>`);
     }
 });
 
 app.get('/api/auth/github/url', (req, res) => {
     const origin = req.query.origin as string || '*';
+    const clientId = process.env.GITHUB_CLIENT_ID;
+
+    if (!clientId) {
+        console.error("[Auth] GITHUB_CLIENT_ID is missing in environment");
+        return res.status(500).json({ error: "GitHub Client ID not configured on server" });
+    }
+
+    const redirectUri = origin === '*' ? `${req.protocol}://${req.get('host')}/api/auth/github/callback` : `${origin.replace(/\/$/, '')}/api/auth/github/callback`;
     const state = Buffer.from(JSON.stringify({ origin })).toString('base64');
-    const url = `https://github.com/login/oauth/authorize?client_id=${GITHUB_CLIENT_ID}&scope=user:email&state=${state}`;
+    const url = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=user:email&state=${state}`;
+    
+    console.log(`[Auth] Generated GitHub URL for origin: ${origin}`);
     res.json({ url });
 });
 
@@ -552,16 +587,44 @@ app.get('/api/auth/github/callback', async (req, res) => {
         return res.send(`<script>window.opener.postMessage({ type: 'OAUTH_CANCELLED' }, "${origin}");window.close();</script>`);
     }
 
+    const clientId = process.env.GITHUB_CLIENT_ID;
+    const clientSecret = process.env.GITHUB_CLIENT_SECRET;
+
     try {
-        const tokenRes = await axios.post('https://github.com/login/oauth/access_token', { client_id: GITHUB_CLIENT_ID, client_secret: GITHUB_CLIENT_SECRET, code }, { headers: { Accept: 'application/json' } });
+        const tokenRes = await axios.post('https://github.com/login/oauth/access_token', { 
+            client_id: clientId, 
+            client_secret: clientSecret, 
+            code 
+        }, { 
+            headers: { 
+                Accept: 'application/json',
+                'User-Agent': 'node.js'
+            } 
+        });
+        
         const access_token = tokenRes.data.access_token;
-        const userRes = await axios.get('https://api.github.com/user', { headers: { Authorization: `Bearer ${access_token}` } });
-        const emailRes = await axios.get('https://api.github.com/user/emails', { headers: { Authorization: `Bearer ${access_token}` } });
+        if (!access_token) {
+            throw new Error(tokenRes.data.error_description || tokenRes.data.error || 'No access token received from GitHub');
+        }
+
+        const userRes = await axios.get('https://api.github.com/user', { 
+            headers: { 
+                Authorization: `Bearer ${access_token}`,
+                'User-Agent': 'node.js'
+            } 
+        });
+        const emailRes = await axios.get('https://api.github.com/user/emails', { 
+            headers: { 
+                Authorization: `Bearer ${access_token}`,
+                'User-Agent': 'node.js'
+            } 
+        });
+        
         const primaryEmail = emailRes.data.find((e: any) => e.primary)?.email || emailRes.data[0]?.email;
         const name = userRes.data.name || userRes.data.login || 'GitHub User';
         const avatar = userRes.data.avatar_url || '';
 
-        if (!primaryEmail) throw new Error("No GitHub email found");
+        if (!primaryEmail) throw new Error("No GitHub email found associated with this account");
 
         let rows = await sql`SELECT * FROM users WHERE email = ${primaryEmail}`;
         if (rows.length === 0) {
@@ -576,9 +639,10 @@ app.get('/api/auth/github/callback', async (req, res) => {
             location: userRecord.location || ''
         };
         res.send(`<script>window.opener.postMessage({ type: 'OAUTH_SUCCESS', user: ${JSON.stringify(user)} }, "${origin}");window.close();</script>`);
-    } catch (err) {
-        console.error("GitHub OAuth Error", err);
-        res.send(`<script>window.opener.postMessage({ type: 'OAUTH_ERROR', error: 'GitHub Authentication Failed' }, "${origin}");window.close();</script>`);
+    } catch (err: any) {
+        console.error("GitHub OAuth Error:", err.response?.data || err.message);
+        const errorMsg = err.response?.data?.error_description || err.message || 'GitHub Authentication Failed';
+        res.send(`<script>window.opener.postMessage({ type: 'OAUTH_ERROR', error: ${JSON.stringify(errorMsg)} }, "${origin}");window.close();</script>`);
     }
 });
 
