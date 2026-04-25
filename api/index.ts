@@ -76,7 +76,6 @@ async function generateContentWithRetry(genFunc: (apiKey: string) => Promise<any
         
         try {
             const result = await genFunc(apiKey);
-            // Force await response to catch quota/overload errors here
             await result.response;
             return result;
         } catch (err: any) {
@@ -502,7 +501,6 @@ app.get('/api/auth/google/url', (req, res) => {
     const state = Buffer.from(JSON.stringify({ origin })).toString('base64');
     const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=email profile&state=${state}`;
     
-    console.log(`[Auth] Generated Google URL: https://accounts.google.com/...client_id=${clientId.substring(0, 10)}...&redirect_uri=${redirectUri}`);
     res.json({ url });
 });
 
@@ -578,7 +576,6 @@ app.get('/api/auth/github/url', (req, res) => {
     const state = Buffer.from(JSON.stringify({ origin })).toString('base64');
     const url = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=user:email&state=${state}`;
     
-    console.log(`[Auth] Generated GitHub URL: https://github.com/login/oauth/authorize?client_id=${clientId.substring(0, 5)}...&redirect_uri=${redirectUri}`);
     res.json({ url });
 });
 
