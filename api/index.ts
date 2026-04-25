@@ -1,6 +1,11 @@
 import express from "express";
 import dotenv from "dotenv";
-dotenv.config({ path: '.env.local' });
+import cors from "cors";
+
+// Load environment variables
+dotenv.config(); // Standard .env
+dotenv.config({ path: '.env.local' }); // Local overrides
+
 import bcrypt from "bcryptjs";
 import axios from "axios";
 import { neon } from "@neondatabase/serverless";
@@ -99,6 +104,7 @@ async function generateContentWithRetry(genFunc: (apiKey: string) => Promise<any
 
 const app = express();
 
+app.use(cors());
 app.use((req, res, next) => {
     if (req.body) {
         next();
@@ -496,7 +502,7 @@ app.get('/api/auth/google/url', (req, res) => {
     const state = Buffer.from(JSON.stringify({ origin })).toString('base64');
     const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&response_type=code&scope=email profile&state=${state}`;
     
-    console.log(`[Auth] Generated Google URL for origin: ${origin}`);
+    console.log(`[Auth] Generated Google URL: https://accounts.google.com/...client_id=${clientId.substring(0, 10)}...&redirect_uri=${redirectUri}`);
     res.json({ url });
 });
 
@@ -572,7 +578,7 @@ app.get('/api/auth/github/url', (req, res) => {
     const state = Buffer.from(JSON.stringify({ origin })).toString('base64');
     const url = `https://github.com/login/oauth/authorize?client_id=${clientId}&redirect_uri=${encodeURIComponent(redirectUri)}&scope=user:email&state=${state}`;
     
-    console.log(`[Auth] Generated GitHub URL for origin: ${origin}`);
+    console.log(`[Auth] Generated GitHub URL: https://github.com/login/oauth/authorize?client_id=${clientId.substring(0, 5)}...&redirect_uri=${redirectUri}`);
     res.json({ url });
 });
 
