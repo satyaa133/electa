@@ -485,7 +485,7 @@ app.post('/api/user/update', async (req, res) => {
 
 app.get('/api/auth/google/url', (req, res) => {
     const origin = req.query.origin as string || '*';
-    const clientId = process.env.GOOGLE_CLIENT_ID;
+    const clientId = process.env.GOOGLE_CLIENT_ID?.trim();
     
     if (!clientId) {
         console.error("[Auth] GOOGLE_CLIENT_ID is missing in environment");
@@ -511,8 +511,8 @@ app.get('/api/auth/google/callback', async (req, res) => {
         return res.send(`<script>window.opener.postMessage({ type: 'OAUTH_CANCELLED' }, "${origin}");window.close();</script>`);
     }
 
-    const clientId = process.env.GOOGLE_CLIENT_ID;
-    const clientSecret = process.env.GOOGLE_CLIENT_SECRET;
+    const clientId = process.env.GOOGLE_CLIENT_ID?.trim();
+    const clientSecret = process.env.GOOGLE_CLIENT_SECRET?.trim();
 
     const redirectUri = origin === '*' ? `${req.protocol}://${req.get('host')}/api/auth/google/callback` : `${origin.replace(/\/$/, '')}/api/auth/google/callback`;
 
@@ -561,7 +561,7 @@ app.get('/api/auth/google/callback', async (req, res) => {
 
 app.get('/api/auth/github/url', (req, res) => {
     const origin = req.query.origin as string || '*';
-    const clientId = process.env.GITHUB_CLIENT_ID;
+    const clientId = process.env.GITHUB_CLIENT_ID?.trim();
 
     if (!clientId) {
         console.error("[Auth] GITHUB_CLIENT_ID is missing in environment");
@@ -587,8 +587,8 @@ app.get('/api/auth/github/callback', async (req, res) => {
         return res.send(`<script>window.opener.postMessage({ type: 'OAUTH_CANCELLED' }, "${origin}");window.close();</script>`);
     }
 
-    const clientId = process.env.GITHUB_CLIENT_ID;
-    const clientSecret = process.env.GITHUB_CLIENT_SECRET;
+    const clientId = process.env.GITHUB_CLIENT_ID?.trim();
+    const clientSecret = process.env.GITHUB_CLIENT_SECRET?.trim();
 
     try {
         const tokenRes = await axios.post('https://github.com/login/oauth/access_token', { 

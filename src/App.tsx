@@ -774,8 +774,9 @@ export default function App() {
           }
         }, 500);
       }
-    } catch (err) {
-      setAuthError('Failed to initiate Google Sign-in');
+    } catch (err: any) {
+      console.error('Google Auth Error:', err);
+      setAuthError(`Failed to initiate Google Sign-in: ${err.message}`);
       setIsLoading(false);
     }
   };
@@ -807,8 +808,9 @@ export default function App() {
           }
         }, 500);
       }
-    } catch (err) {
-      setAuthError('Failed to initiate GitHub Sign-in');
+    } catch (err: any) {
+      console.error('GitHub Auth Error:', err);
+      setAuthError(`Failed to initiate GitHub Sign-in: ${err.message}`);
       setIsLoading(false);
     }
   };
