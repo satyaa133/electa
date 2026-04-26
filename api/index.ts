@@ -1,11 +1,6 @@
 import express from "express";
 import dotenv from "dotenv";
-import cors from "cors";
-
-// Load environment variables
-dotenv.config(); // Standard .env
-dotenv.config({ path: '.env.local' }); // Local overrides
-
+dotenv.config({ path: '.env.local' });
 import bcrypt from "bcryptjs";
 import axios from "axios";
 import { neon } from "@neondatabase/serverless";
@@ -103,14 +98,7 @@ async function generateContentWithRetry(genFunc: (apiKey: string) => Promise<any
 
 const app = express();
 
-app.use(cors());
-app.use((req, res, next) => {
-    if (req.body) {
-        next();
-    } else {
-        express.json({ limit: '50mb' })(req, res, next);
-    }
-});
+app.use(express.json({ limit: '50mb' }));
 
 async function initDB() {
     try {

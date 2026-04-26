@@ -29,8 +29,6 @@ import {
   Github,
   Chrome,
   User as UserIcon,
-  Settings,
-  CheckCircle2,
   Upload,
   Hourglass,
   RotateCcw,
@@ -45,12 +43,12 @@ import { useTheme } from './context/ThemeContext';
 // --- Constants ---
 
 const MOODS = [
-  { id: 'happy', label: 'Happy', icon: Smile, color: 'bg-yellow-100 dark:bg-yellow-900/30 text-yellow-700 dark:text-yellow-400 border-yellow-200 dark:border-yellow-900/50' },
-  { id: 'stressed', label: 'Stressed', icon: Zap, color: 'bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-400 border-orange-200 dark:border-orange-900/50' },
-  { id: 'bored', label: 'Bored', icon: Frown, color: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-400 border-blue-200 dark:border-blue-900/50' },
-  { id: 'relaxed', label: 'Relaxed', icon: Coffee, color: 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border-emerald-200 dark:border-emerald-900/50' },
-  { id: 'energetic', label: 'Energetic', icon: Sun, color: 'bg-rose-100 dark:bg-rose-900/30 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-900/50' },
-  { id: 'melancholic', label: 'Melancholic', icon: Moon, color: 'bg-indigo-100 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-400 border-indigo-200 dark:border-indigo-900/50' },
+  { id: 'happy', label: 'Happy', icon: Smile, color: 'bg-rose-500/10 backdrop-blur-xl text-rose-600 dark:text-rose-400 border-rose-500/20' },
+  { id: 'stressed', label: 'Stressed', icon: Zap, color: 'bg-rose-500/10 backdrop-blur-xl text-rose-600 dark:text-rose-400 border-rose-500/20' },
+  { id: 'bored', label: 'Bored', icon: Frown, color: 'bg-rose-500/10 backdrop-blur-xl text-rose-600 dark:text-rose-400 border-rose-500/20' },
+  { id: 'relaxed', label: 'Relaxed', icon: Coffee, color: 'bg-rose-500/10 backdrop-blur-xl text-rose-600 dark:text-rose-400 border-rose-500/20' },
+  { id: 'energetic', label: 'Energetic', icon: Sun, color: 'bg-rose-500/10 backdrop-blur-xl text-rose-600 dark:text-rose-400 border-rose-500/20' },
+  { id: 'melancholic', label: 'Melancholic', icon: Moon, color: 'bg-rose-500/10 backdrop-blur-xl text-rose-600 dark:text-rose-400 border-rose-500/20' },
 ];
 
 const CATEGORIES = [
@@ -70,73 +68,20 @@ const FOOD_SUBCATEGORIES = [
 ];
 
 const SAMPLE_QUESTIONS: Record<string, string[]> = {
-  movies: [
-    "Is this a good family movie?",
-    "Tell me about the director",
-    "Where can I watch this?",
-    "Is it too scary for kids?"
-  ],
-  movie: [
-    "Is this a good family movie?",
-    "Tell me about the director",
-    "Where can I watch this?",
-    "Is it too scary for kids?"
-  ],
-  music: [
-    "What genre is this?",
-    "Recommend similar artists",
-    "Tell me about this album",
-    "Is this good for a party?"
-  ],
-  books: [
-    "Is this part of a series?",
-    "How long is this book?",
-    "What's the writing style like?",
-    "Who is the target audience?"
-  ],
-  book: [
-    "Is this part of a series?",
-    "How long is this book?",
-    "What's the writing style like?",
-    "Who is the target audience?"
-  ],
-  restaurants: [
-    "What's the best dish here?",
-    "Is it good for a date?",
-    "Do I need a reservation?",
-    "Is it vegetarian-friendly?"
-  ],
-  food: [
-    "What's the best dish here?",
-    "Is it good for a date?",
-    "Do I need a reservation?",
-    "Is it vegetarian-friendly?"
-  ],
-  restaurant: [
-    "What's the best dish here?",
-    "Is it good for a date?",
-    "Do I need a reservation?",
-    "Is it vegetarian-friendly?"
-  ],
-  games: [
-    "What's the difficulty level?",
-    "How long to beat?",
-    "Is it multiplayer?",
-    "What platforms is it on?"
-  ],
-  game: [
-    "What's the difficulty level?",
-    "How long to beat?",
-    "Is it multiplayer?",
-    "What platforms is it on?"
-  ],
-  default: [
-    "Tell me more about this",
-    "Why do you recommend this?",
-    "Is this popular right now?",
-    "Give me similar suggestions"
-  ]
+  movies: ["Is this a good family movie?", "Tell me about the director", "Where can I watch this?", "Is it too scary for kids?"],
+  music: ["What genre is this?", "Recommend similar artists", "Tell me about this album", "Is this good for a party?"],
+  books: ["Is this part of a series?", "How long is this book?", "What's the writing style like?", "Who is the target audience?"],
+  restaurants: ["What's the best dish here?", "Is it good for a date?", "Do I need a reservation?", "Is it vegetarian-friendly?"],
+  games: ["What's the difficulty level?", "How long to beat?", "Is it multiplayer?", "What platforms is it on?"],
+  default: ["Tell me more about this", "Why do you recommend this?", "Is this popular right now?", "Give me similar suggestions"]
 };
+
+// Aliases
+SAMPLE_QUESTIONS.movie = SAMPLE_QUESTIONS.movies;
+SAMPLE_QUESTIONS.book = SAMPLE_QUESTIONS.books;
+SAMPLE_QUESTIONS.food = SAMPLE_QUESTIONS.restaurants;
+SAMPLE_QUESTIONS.restaurant = SAMPLE_QUESTIONS.restaurants;
+SAMPLE_QUESTIONS.game = SAMPLE_QUESTIONS.games;
 
 const normalizeTitle = (title: string) => (title || "").toLowerCase().trim().replace(/[^a-z0-9]+/g, '-');
 
@@ -159,7 +104,7 @@ const Modal = ({ isOpen, onClose, children }: { isOpen: boolean, onClose: () => 
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
           className="fixed inset-0 z-[60] flex items-center justify-center pointer-events-none p-4"
         >
-          <div className="bg-white dark:bg-zinc-900 w-full max-w-2xl rounded-[32px] overflow-hidden shadow-2xl dark:shadow-2xl dark:shadow-black/50 pointer-events-auto flex flex-col max-h-[90vh] relative">
+          <div className="bg-white/60 dark:bg-zinc-900/60 backdrop-blur-2xl w-full max-w-2xl rounded-[32px] overflow-hidden shadow-2xl dark:shadow-2xl dark:shadow-black/50 pointer-events-auto flex flex-col max-h-[90vh] relative border border-white/20 dark:border-zinc-800/50">
             <button
               onClick={onClose}
               className="absolute top-6 right-6 p-2 bg-black/20 hover:bg-black/40 backdrop-blur-md text-white rounded-full z-50 transition-colors"
@@ -182,10 +127,10 @@ const MoodButton = ({ mood, isActive, onClick }: { mood: any, isActive: boolean,
     whileTap={{ scale: 0.95 }}
     onClick={onClick}
     className={cn(
-      "flex flex-col items-center justify-center p-4 rounded-2xl border-2 transition-all",
+      "flex flex-col items-center justify-center p-4 rounded-2xl border transition-all backdrop-blur-sm",
       isActive
-        ? cn(mood.color, "border-current shadow-lg")
-        : "bg-white dark:bg-zinc-800 border-zinc-100 dark:border-zinc-700 text-zinc-400 dark:text-zinc-500 hover:border-zinc-200 dark:hover:border-zinc-600"
+        ? cn(mood.color, "shadow-lg shadow-rose-500/10")
+        : "bg-white/30 dark:bg-zinc-800/30 border-white/10 dark:border-zinc-700/20 text-zinc-400 dark:text-zinc-500 hover:bg-white/50 dark:hover:bg-zinc-800/50"
     )}
   >
     <mood.icon size={32} className="mb-2" />
@@ -193,23 +138,23 @@ const MoodButton = ({ mood, isActive, onClick }: { mood: any, isActive: boolean,
   </motion.button>
 );
 
-const RecCard = ({ 
-  rec, 
-  onClick, 
-  onFeedback, 
+const RecCard = ({
+  rec,
+  onClick,
+  onFeedback,
   onAsk,
   isLiked = false,
   isDisliked = false,
   isSaved = false
-}: { 
-  rec: Recommendation, 
-  onClick: () => void, 
+}: {
+  rec: Recommendation,
+  onClick: () => void,
   onFeedback: (id: string, type: 'like' | 'dislike' | 'save') => void,
   onAsk: (rec: Recommendation) => void,
   isLiked?: boolean,
   isDisliked?: boolean,
   isSaved?: boolean,
-  key?: any 
+  key?: any
 }) => {
   return (
     <motion.div
@@ -217,7 +162,7 @@ const RecCard = ({
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       whileHover={{ y: -4 }}
-      className="bg-white dark:bg-zinc-800 rounded-3xl border border-zinc-100 dark:border-zinc-700 shadow-sm hover:shadow-xl dark:hover:shadow-2xl dark:hover:shadow-black/30 transition-all group cursor-pointer flex flex-col h-full relative"
+      className="bg-white/30 dark:bg-zinc-800/30 backdrop-blur-md rounded-3xl border border-white/20 dark:border-zinc-700/30 shadow-sm hover:shadow-xl dark:hover:shadow-2xl dark:hover:shadow-black/30 transition-all group cursor-pointer flex flex-col h-full relative"
       onClick={onClick}
     >
       <div className="p-6 flex-1 flex flex-col">
@@ -233,9 +178,9 @@ const RecCard = ({
         </div>
         <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2 line-clamp-1">{rec.title}</h3>
         <p className="text-zinc-500 dark:text-zinc-400 text-sm line-clamp-2 mb-4">{rec.description || "No description available."}</p>
-        <div className="p-3 bg-zinc-50 dark:bg-zinc-700 rounded-xl mb-6">
+        <div className="p-3 bg-white/20 dark:bg-zinc-900/40 rounded-xl mb-6 border border-white/10 dark:border-zinc-800/50 backdrop-blur-sm">
           <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-400 dark:text-zinc-300 uppercase tracking-widest mb-1">
-            <Sparkles size={12} className="text-amber-500" /> AI Reasoning
+            <Sparkles size={12} className="text-rose-500" /> AI Reasoning
           </div>
           <p className="text-xs text-zinc-600 dark:text-zinc-300 italic leading-relaxed">"{rec.reason || "AI selected this for your current vibe."}"</p>
         </div>
@@ -247,8 +192,8 @@ const RecCard = ({
               onClick={() => onFeedback(rec.id, 'like')}
               className={cn(
                 "p-2 rounded-full transition-colors",
-                isLiked 
-                  ? "bg-rose-50 dark:bg-rose-900/30 text-rose-500" 
+                isLiked
+                  ? "bg-rose-50 dark:bg-rose-900/30 text-rose-500"
                   : "hover:bg-rose-50 dark:hover:bg-rose-900/30 hover:text-rose-500 text-zinc-400 dark:text-zinc-500"
               )}
             >
@@ -308,6 +253,98 @@ interface UserProfile {
   location?: string;
 }
 
+const LoadingText = () => {
+  const [index, setIndex] = useState(0);
+  const texts = [
+    "Curating tailored gems...",
+    "Analyzing your vibe...",
+    "Consulting the stars...",
+    "Finding the perfect match...",
+    "Polishing the results..."
+  ];
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setIndex((prev) => (prev + 1) % texts.length);
+    }, 2500);
+    return () => clearInterval(interval);
+  }, [texts.length]);
+
+  return (
+    <div className="h-4 overflow-hidden relative w-full flex justify-center">
+      <AnimatePresence mode="wait">
+        <motion.p
+          key={texts[index]}
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
+          transition={{ duration: 0.5 }}
+          className="font-mono text-[10px] md:text-xs uppercase tracking-widest text-zinc-500 dark:text-zinc-400"
+        >
+          {texts[index]}
+        </motion.p>
+      </AnimatePresence>
+    </div>
+  );
+};
+
+const AppBackground = () => (
+  <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
+    <motion.div
+      animate={{
+        scale: [1, 1.2, 1, 1.3, 1],
+        x: [0, 100, -50, 80, 0],
+        y: [0, 80, 120, -30, 0],
+      }}
+      transition={{
+        duration: 10,
+        repeat: Infinity,
+        ease: "easeInOut"
+      }}
+      className="absolute -top-[10%] -left-[10%] w-[60%] h-[60%] rounded-full bg-rose-400/15 dark:bg-rose-500/10 blur-[100px]"
+    />
+    <motion.div
+      animate={{
+        scale: [1, 1.3, 1.1, 1.4, 1],
+        x: [0, -120, 60, -80, 0],
+        y: [0, 120, -60, 150, 0],
+      }}
+      transition={{
+        duration: 15,
+        repeat: Infinity,
+        ease: "easeInOut"
+      }}
+      className="absolute top-[10%] -right-[15%] w-[70%] h-[70%] rounded-full bg-indigo-400/10 dark:bg-indigo-600/8 blur-[120px]"
+    />
+    <motion.div
+      animate={{
+        scale: [1, 1.1, 1.3, 1, 1],
+        x: [0, 80, -120, 30, 0],
+        y: [0, -100, 60, -140, 0],
+      }}
+      transition={{
+        duration: 12,
+        repeat: Infinity,
+        ease: "easeInOut"
+      }}
+      className="absolute -bottom-[15%] left-[10%] w-[65%] h-[65%] rounded-full bg-rose-300/10 dark:bg-rose-700/5 blur-[110px]"
+    />
+    <motion.div
+      animate={{
+        scale: [1, 1.1, 1.2, 1, 1],
+        x: [0, -60, 120, -30, 0],
+        y: [0, 60, -100, 120, 0],
+      }}
+      transition={{
+        duration: 20,
+        repeat: Infinity,
+        ease: "easeInOut"
+      }}
+      className="absolute top-[30%] left-[20%] w-[50%] h-[50%] rounded-full bg-slate-400/10 dark:bg-slate-700/5 blur-[100px]"
+    />
+  </div>
+);
+
 export default function App() {
   const [user, setUser] = useState<UserProfile | null>(() => {
     const savedUser = localStorage.getItem('electa_user');
@@ -317,10 +354,10 @@ export default function App() {
   useEffect(() => {
     if (user) {
       // Hygiene check: remove duplicates or corrupted bookmarks
-      const cleanBookmarks = user.bookmarks.filter((b, idx, self) => 
+      const cleanBookmarks = (user.bookmarks || []).filter((b, idx, self) =>
         b && b.title && self.findIndex(t => t.title === b.title || (t.id && t.id === b.id)) === idx
       );
-      if (cleanBookmarks.length !== user.bookmarks.length) {
+      if (cleanBookmarks.length !== (user.bookmarks || []).length) {
         console.warn("Hygiene check: Removed duplicate/corrupted bookmarks");
         setUser({ ...user, bookmarks: cleanBookmarks });
       }
@@ -398,7 +435,7 @@ export default function App() {
   useEffect(() => {
     // Basic API health check
     fetch('/api/location')
-      .catch(() => {});
+      .catch(() => { });
   }, []);
 
   useEffect(() => {
@@ -430,6 +467,7 @@ export default function App() {
 
   const handleSetLocation = (newLoc: string | null) => {
     setLocation(newLoc);
+    if (newLoc) setManualLocationInput(newLoc);
     if (user && newLoc) {
       setUser({ ...user, location: newLoc });
       // Sync to backend
@@ -444,7 +482,7 @@ export default function App() {
           bookmarks: user.bookmarks,
           location: newLoc
         }),
-      }).catch(() => {});
+      }).catch(() => { });
     }
   };
 
@@ -457,7 +495,7 @@ export default function App() {
         handleSetLocation(data.location || "Unknown City");
         return true;
       }
-    } catch (err) {}
+    } catch (err) { }
     return false;
   };
 
@@ -502,7 +540,7 @@ export default function App() {
         } catch (err) {
           const success = await fetchIPLocation();
           if (!success) {
-            setLocation(`${latitude.toFixed(2)}°, ${longitude.toFixed(2)}°`);
+            handleSetLocation(`${latitude.toFixed(2)}°, ${longitude.toFixed(2)}°`);
           }
         } finally {
           setIsLocating(false);
@@ -537,7 +575,7 @@ export default function App() {
     setIsLoading(true);
     setApiError(null);
     try {
-      const prefs = user ? [...user.preferences.genres, ...user.preferences.dietary, ...user.preferences.interests] : [];
+      const prefs = user ? [...(user.preferences?.genres || []), ...(user.preferences?.dietary || []), ...(user.preferences?.interests || [])] : [];
       // Use the raw response to get the context
       const response = await fetch('/api/recommendations', {
         method: 'POST',
@@ -555,12 +593,12 @@ export default function App() {
       });
       if (!response.ok) {
         let errorData;
-        try { const errorText = await response.text(); errorData = JSON.parse(errorText); } catch(e) {}
+        try { const errorText = await response.text(); errorData = JSON.parse(errorText); } catch (e) { }
         throw new Error(errorData?.error || "Failed to fetch recommendations");
       }
-      
+
       const data = await response.json();
-      
+
       const recs = (data.recommendations || []).map((r: any) => ({
         ...r,
         title: r.title || r.name || "Recommendation",
@@ -624,20 +662,20 @@ export default function App() {
 
     if (type === 'like') {
       const titleKey = normalizeTitle(item.title);
-      
+
       setLikedIds(prev => {
         const next = new Set(prev);
         if (next.has(titleKey)) next.delete(titleKey);
         else next.add(titleKey);
         return next;
       });
-      
+
       setDislikedIds(prev => {
         const next = new Set(prev);
         next.delete(titleKey);
         return next;
       });
-      
+
       if (!likedIds.has(titleKey)) {
         setHistory(h => [...h, item.title].slice(-5));
       }
@@ -645,14 +683,14 @@ export default function App() {
 
     if (type === 'dislike') {
       const titleKey = normalizeTitle(item.title);
-      
+
       setDislikedIds(prev => {
         const next = new Set(prev);
         if (next.has(titleKey)) next.delete(titleKey);
         else next.add(titleKey);
         return next;
       });
-      
+
       setLikedIds(prev => {
         const next = new Set(prev);
         next.delete(titleKey);
@@ -662,10 +700,10 @@ export default function App() {
 
     if (type === 'save' && user) {
       const isBookmarked = user.bookmarks.some((b: any) => b.id === id || normalizeTitle(b.title) === normalizeTitle(item.title));
-      const newBookmarks = isBookmarked 
+      const newBookmarks = isBookmarked
         ? user.bookmarks.filter((b: any) => b.id !== id && normalizeTitle(b.title) !== normalizeTitle(item.title))
         : [item, ...user.bookmarks];
-      
+
       const updatedUser = { ...user, bookmarks: newBookmarks };
       setUser(updatedUser);
 
@@ -680,7 +718,7 @@ export default function App() {
           preferences: user.preferences,
           bookmarks: newBookmarks
         }),
-      }).catch(() => {});
+      }).catch(() => { });
     }
   };
 
@@ -820,7 +858,7 @@ export default function App() {
       // Robust origin check for development
       const isSameOrigin = event.origin === window.location.origin;
       const isLocalhostMatch = event.origin.includes('localhost') && window.location.origin.includes('localhost');
-      
+
       if (!isSameOrigin && !isLocalhostMatch) return;
 
       if (event.data?.type === 'OAUTH_SUCCESS') {
@@ -843,12 +881,20 @@ export default function App() {
     return () => window.removeEventListener('message', handleMessage);
   }, []);
 
+  const handleLogout = () => {
+    setUser(null);
+    setMood(null);
+    setRecommendations([]);
+    localStorage.removeItem('electa_user');
+  };
+
   if (!user) {
     return (
       <div className="min-h-screen bg-[#F8F9FA] dark:bg-zinc-950 flex flex-col font-sans relative">
+        <AppBackground />
         <header className="absolute top-0 left-0 w-full p-6 md:p-8 flex justify-between items-center z-10 pointer-events-none">
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl pointer-events-auto shadow-sm">
+            <div className="p-2 bg-white/40 dark:bg-zinc-900/40 backdrop-blur-md text-zinc-900 dark:text-white rounded-xl pointer-events-auto shadow-sm border border-white/20 dark:border-zinc-800/50">
               <Sparkles size={20} />
             </div>
             <span className="font-bold text-xl tracking-tight text-zinc-900 dark:text-white pointer-events-auto">Electa</span>
@@ -866,7 +912,7 @@ export default function App() {
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="bg-white dark:bg-zinc-900 p-8 rounded-[40px] shadow-2xl shadow-zinc-200 dark:shadow-zinc-900/50 max-w-sm w-full border border-zinc-100 dark:border-zinc-800"
+            className="bg-white/20 dark:bg-zinc-900/40 backdrop-blur-2xl p-8 rounded-[40px] shadow-2xl shadow-zinc-200/10 dark:shadow-black/50 max-w-sm w-full border border-white/20 dark:border-zinc-800/50"
           >
             <div className="text-center mb-8">
               <h1 className="text-3xl font-bold text-zinc-900 dark:text-white mb-2 tracking-tight">
@@ -887,7 +933,7 @@ export default function App() {
                     placeholder="Full Name"
                     value={authForm.name}
                     onChange={(e) => setAuthForm({ ...authForm, name: e.target.value })}
-                    className="w-full pl-12 pr-4 py-4 bg-zinc-50 dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 rounded-2xl focus:outline-none focus:ring-2 focus:ring-zinc-900/10 dark:focus:ring-white/10 transition-all dark:text-white"
+                    className="w-full pl-12 pr-4 py-4 bg-white/20 dark:bg-zinc-800/40 backdrop-blur-sm border border-white/10 dark:border-zinc-700/30 rounded-2xl focus:outline-none focus:ring-2 focus:ring-rose-500/20 transition-all dark:text-white"
                   />
                 </div>
               )}
@@ -906,8 +952,8 @@ export default function App() {
                     className={cn(
                       "w-full pl-12 pr-4 py-4 bg-zinc-50 dark:bg-zinc-800 border rounded-2xl focus:outline-none transition-all dark:text-white",
                       emailFormError
-                        ? "border-rose-500 focus:ring-2 focus:ring-rose-500/20"
-                        : "border-zinc-100 dark:border-zinc-700 focus:ring-2 focus:ring-zinc-900/10 dark:focus:ring-white/10"
+                        ? "bg-white/20 dark:bg-zinc-800/40 backdrop-blur-sm border-rose-500 focus:ring-2 focus:ring-rose-500/20"
+                        : "bg-white/20 dark:bg-zinc-800/40 backdrop-blur-sm border-white/10 dark:border-zinc-700/30 focus:ring-2 focus:ring-rose-500/20"
                     )}
                   />
                 </div>
@@ -923,7 +969,7 @@ export default function App() {
                   placeholder="Password"
                   value={authForm.password}
                   onChange={(e) => setAuthForm({ ...authForm, password: e.target.value })}
-                  className="w-full pl-12 pr-4 py-4 bg-zinc-50 dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 rounded-2xl focus:outline-none focus:ring-2 focus:ring-zinc-900/10 dark:focus:ring-white/10 transition-all dark:text-white"
+                  className="w-full pl-12 pr-4 py-4 bg-white/20 dark:bg-zinc-800/40 backdrop-blur-sm border border-white/10 dark:border-zinc-700/30 rounded-2xl focus:outline-none focus:ring-2 focus:ring-rose-500/20 transition-all dark:text-white"
                 />
               </div>
 
@@ -934,7 +980,7 @@ export default function App() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full mt-4 py-4 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl font-bold hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-all active:scale-95 shadow-lg shadow-zinc-200 dark:shadow-white/10 flex items-center justify-center gap-2 disabled:opacity-50"
+                className="w-full py-4 bg-zinc-900/90 dark:bg-white/90 backdrop-blur-md text-white dark:text-zinc-900 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-zinc-900 dark:hover:bg-white transition-all disabled:opacity-50 shadow-xl shadow-zinc-900/20 dark:shadow-white/10 group border border-white/10 dark:border-zinc-800/50"
               >
                 {isLoading ? <Loader2 className="animate-spin" size={18} /> : (authMode === 'login' ? 'Sign In' : 'Sign Up')} <ArrowRight size={18} />
               </button>
@@ -945,7 +991,9 @@ export default function App() {
                 <div className="w-full border-t border-zinc-100 dark:border-zinc-700"></div>
               </div>
               <div className="relative flex justify-center text-xs uppercase">
-                <span className="bg-white dark:bg-zinc-900 px-4 text-zinc-400 dark:text-zinc-500 font-bold tracking-widest">Or continue with</span>
+                <span className="bg-white/40 dark:bg-zinc-900/40 backdrop-blur-md px-4 py-1 rounded-full text-zinc-500 dark:text-zinc-400 font-bold tracking-widest border border-white/10 dark:border-zinc-800/50">
+                  Or continue with
+                </span>
               </div>
             </div>
 
@@ -953,14 +1001,14 @@ export default function App() {
               <button
                 onClick={handleGoogleSignIn}
                 disabled={isLoading}
-                className="flex items-center justify-center gap-2 py-3 border border-zinc-100 dark:border-zinc-700 rounded-2xl hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all text-sm font-bold disabled:opacity-50 dark:text-white"
+                className="flex items-center justify-center gap-2 py-3 bg-white/20 dark:bg-zinc-800/40 backdrop-blur-sm border border-white/10 dark:border-zinc-700/30 rounded-2xl hover:bg-white/40 dark:hover:bg-zinc-800/60 transition-all text-sm font-bold disabled:opacity-50 dark:text-white"
               >
                 {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Chrome size={18} className="text-rose-500" />} Google
               </button>
               <button
                 onClick={handleGithubSignIn}
                 disabled={isLoading}
-                className="flex items-center justify-center gap-2 py-3 border border-zinc-100 dark:border-zinc-700 rounded-2xl hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all text-sm font-bold disabled:opacity-50 dark:text-white"
+                className="flex items-center justify-center gap-2 py-3 bg-white/20 dark:bg-zinc-800/40 backdrop-blur-sm border border-white/10 dark:border-zinc-700/30 rounded-2xl hover:bg-white/40 dark:hover:bg-zinc-800/60 transition-all text-sm font-bold disabled:opacity-50 dark:text-white"
               >
                 {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Github size={18} />} GitHub
               </button>
@@ -977,37 +1025,23 @@ export default function App() {
           </motion.div>
         </div>
 
-        <footer className="px-6 py-8 border-t border-zinc-100 dark:border-zinc-800 flex flex-col md:flex-row items-center justify-between gap-4 text-zinc-400 text-xs font-medium uppercase tracking-widest mt-auto">
-          <div className="flex items-center gap-6">
-            <span>© 2026 Electa</span>
-            <span className="w-1 h-1 rounded-full bg-zinc-200 dark:bg-zinc-700" />
-            <span>Powered by Gemini 3.0</span>
-          </div>
-          <div className="flex items-center gap-8">
-            <div className="flex items-center gap-2">
-              <ShieldCheck size={14} /> Privacy First
-            </div>
-            <div className="flex items-center gap-2">
-              <Zap size={14} /> Real-time Inference
-            </div>
-          </div>
-        </footer>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F8F9FA] dark:bg-zinc-950 text-zinc-900 dark:text-white font-sans overflow-x-hidden">
+    <div className="min-h-screen bg-[#F8F9FA] dark:bg-zinc-950 text-zinc-900 dark:text-white font-sans overflow-x-hidden relative">
+      <AppBackground />
       {/* Header */}
-      <header className="sticky top-0 z-30 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-xl border-b border-zinc-100 dark:border-zinc-800 px-4 md:px-6 py-4">
-        <motion.div 
+      <header className="sticky top-0 z-30 bg-white/10 dark:bg-black/10 backdrop-blur-2xl px-4 md:px-6 py-4 transition-all border-b border-white/5">
+        <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
           className="max-w-7xl mx-auto flex items-center justify-between"
         >
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-xl">
+            <div className="p-2 bg-white/30 dark:bg-zinc-900/40 backdrop-blur-md text-zinc-900 dark:text-white rounded-xl border border-white/10 dark:border-zinc-800/50 shadow-sm">
               <Sparkles size={20} />
             </div>
             <span className="font-bold text-xl tracking-tight text-zinc-900 dark:text-white">Electa</span>
@@ -1019,49 +1053,52 @@ export default function App() {
                 <Loader2 size={12} className="animate-spin" /> Locating...
               </div>
             ) : (
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 md:gap-3 pl-3 md:pl-6 border-l border-white/5">
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setShowManualLocation(true)}
+                    className="flex items-center gap-2 text-xs font-bold text-zinc-600 dark:text-zinc-300 bg-white/20 dark:bg-zinc-800/40 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 dark:border-zinc-700/30 hover:bg-white/40 dark:hover:bg-zinc-700/60 transition-all group"
+                    title="Click to set location manually"
+                  >
+                    <MapPin size={12} className={cn("transition-colors", location && !location.includes("unavailable") ? "text-rose-500" : "text-zinc-400 dark:text-zinc-500")} />
+                    <span className="inline truncate max-w-[100px] md:max-w-[150px]">{location || "Set Location"}</span>
+                  </button>
+                  <button
+                    onClick={requestLocation}
+                    className="p-1.5 text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-white/20 dark:hover:bg-zinc-800/40 backdrop-blur-sm rounded-full transition-all border border-transparent hover:border-white/10"
+                    title="Refresh automatic location"
+                  >
+                    <Zap size={14} className={cn(isLocating ? "animate-pulse text-amber-500" : "text-zinc-400 dark:text-zinc-500")} />
+                  </button>
+                </div>
                 <button
-                  onClick={() => setShowManualLocation(true)}
-                  className="flex items-center gap-2 text-xs font-bold text-zinc-600 dark:text-zinc-300 bg-zinc-50 dark:bg-zinc-800 px-3 py-1.5 rounded-full border border-zinc-100 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors group"
-                  title="Click to set location manually"
+                  onClick={toggleTheme}
+                  className="p-2.5 rounded-full text-zinc-500 dark:text-zinc-400 bg-white/20 dark:bg-zinc-800/40 backdrop-blur-md border border-white/10 dark:border-zinc-700/30 hover:bg-white/40 dark:hover:bg-zinc-700/60 transition-all shadow-sm"
+                  title={isDark ? "Switch to light mode" : "Switch to dark mode"}
                 >
-                  <MapPin size={12} className={cn("transition-colors", location && !location.includes("unavailable") ? "text-rose-500" : "text-zinc-400 dark:text-zinc-500")} />
-                  <span className="inline truncate max-w-[100px] md:max-w-[150px]">{location || "Set Location"}</span>
+                  {isDark ? <Sun size={18} /> : <Moon size={18} />}
                 </button>
+                
                 <button
-                  onClick={requestLocation}
-                  className="p-1.5 text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800 rounded-full transition-all"
-                  title="Refresh automatic location"
+                  onClick={() => setIsProfileOpen(true)}
+                  className="w-10 h-10 rounded-full bg-white/20 dark:bg-zinc-800/40 backdrop-blur-md border border-white/10 dark:border-zinc-700/30 flex items-center justify-center text-zinc-600 dark:text-zinc-400 font-bold shadow-sm hover:bg-white/40 dark:hover:bg-zinc-700/60 transition-all overflow-hidden"
                 >
-                  <Zap size={14} className={cn(isLocating ? "animate-pulse text-amber-500" : "text-zinc-400 dark:text-zinc-500")} />
+                  {user?.profile_photo ? (
+                    <img src={user.profile_photo} alt={user?.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                  ) : (
+                    (user?.name || "U").charAt(0).toUpperCase()
+                  )}
+                </button>
+
+                <button
+                  onClick={handleLogout}
+                  className="p-2.5 rounded-full text-zinc-500 dark:text-zinc-400 bg-white/20 dark:bg-zinc-800/40 backdrop-blur-md border border-white/10 dark:border-zinc-700/30 hover:bg-white/40 dark:hover:bg-zinc-700/60 hover:text-rose-500 dark:hover:text-rose-400 transition-all shadow-sm"
+                  title="Logout"
+                >
+                  <LogOut size={18} />
                 </button>
               </div>
             )}
-            <div className="flex items-center gap-2 md:gap-3 pl-3 md:pl-6 border-l border-zinc-100 dark:border-zinc-800">
-              <button
-                onClick={toggleTheme}
-                className="p-2 rounded-full text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-                title={isDark ? "Switch to light mode" : "Switch to dark mode"}
-              >
-                {isDark ? <Sun size={20} /> : <Moon size={20} />}
-              </button>
-              <button
-                onClick={() => {
-                  requestLocation();
-                  setIsProfileOpen(true);
-                }}
-                className="w-10 h-10 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden flex items-center justify-center text-zinc-600 dark:text-zinc-300 font-bold hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors border border-zinc-200 dark:border-zinc-700"
-              >
-                {user.profile_photo ? (
-                  <img src={user.profile_photo} alt={user.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
-                ) : (
-                  user.name[0].toUpperCase()
-                )}
-              </button>
-              <button onClick={() => setUser(null)} className="text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors">
-                <LogOut size={20} />
-              </button>
-            </div>
           </div>
         </motion.div>
       </header>
@@ -1073,7 +1110,7 @@ export default function App() {
         className="max-w-7xl mx-auto px-4 md:px-6 py-8 md:py-12"
       >
         {/* Mood Section */}
-        <motion.section 
+        <motion.section
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: 0.1 }}
@@ -1120,7 +1157,7 @@ export default function App() {
         </motion.section>
 
         {/* Category Filter */}
-        <motion.section 
+        <motion.section
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1], delay: 0.2 }}
@@ -1141,8 +1178,8 @@ export default function App() {
                 className={cn(
                   "flex items-center gap-2 px-4 py-2 md:px-6 md:py-3 rounded-2xl text-xs md:text-sm font-bold transition-all",
                   category === cat.id
-                    ? "bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 shadow-lg shadow-zinc-200 dark:shadow-white/10"
-                    : "bg-white dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border border-zinc-100 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-600"
+                    ? "bg-rose-500/20 backdrop-blur-xl text-rose-600 dark:text-rose-400 border border-rose-500/30 shadow-xl shadow-rose-500/10"
+                    : "bg-white/30 dark:bg-zinc-800/30 backdrop-blur-md text-zinc-500 dark:text-zinc-400 border border-white/10 dark:border-zinc-700/20 hover:bg-white/50 dark:hover:bg-zinc-800/50"
                 )}
               >
                 <cat.icon size={16} />
@@ -1190,7 +1227,7 @@ export default function App() {
                 className="absolute inset-0 flex flex-col items-center justify-center text-zinc-400 dark:text-zinc-500"
               >
                 <Loader2 size={48} className="animate-spin mb-4 text-zinc-900 dark:text-white" />
-                <p className="font-mono text-xs uppercase tracking-widest">Curating tailored gems...</p>
+                <LoadingText />
               </motion.div>
             ) : mood ? (
               apiError ? (
@@ -1256,7 +1293,7 @@ export default function App() {
                 animate={{ opacity: 1 }}
                 className="flex flex-col items-center justify-center py-20 text-center"
               >
-                <div className="w-20 h-20 bg-zinc-50 dark:bg-zinc-800 rounded-full flex items-center justify-center text-zinc-300 dark:text-zinc-600 mb-6">
+                <div className="w-20 h-20 bg-white/40 dark:bg-zinc-800/40 backdrop-blur-md rounded-full flex items-center justify-center text-zinc-400 dark:text-zinc-500 mb-6 border border-white/20 dark:border-zinc-700/30">
                   <Search size={40} />
                 </div>
                 <h3 className="text-xl font-bold text-zinc-500 dark:text-zinc-400">Select a mood to start</h3>
@@ -1272,8 +1309,8 @@ export default function App() {
       {/* Detail Modal */}
       <Modal isOpen={!!selectedRec} onClose={() => setSelectedRec(null)}>
         {selectedRec && (
-          <div className="flex flex-col bg-white dark:bg-zinc-900 min-h-full">
-            <div className="h-32 flex-shrink-0 relative bg-zinc-900 dark:bg-zinc-800 flex items-center px-8">
+          <div className="flex flex-col bg-transparent min-h-full">
+            <div className="h-32 flex-shrink-0 relative bg-rose-500/10 dark:bg-rose-500/20 flex items-center px-8 backdrop-blur-md border-b border-white/10">
               <div>
                 <span className="px-3 py-1 bg-white/10 backdrop-blur-md rounded-full text-[10px] font-bold uppercase tracking-widest text-white border border-white/10 mb-3 inline-block">
                   {selectedRec.category}
@@ -1304,7 +1341,7 @@ export default function App() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <section>
                     <h4 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-3">AI Reasoning</h4>
-                    <div className="p-4 bg-zinc-50 dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 rounded-2xl text-sm text-zinc-600 dark:text-zinc-400 italic">
+                    <div className="p-4 bg-white/20 dark:bg-zinc-900/40 border border-white/10 dark:border-zinc-800/50 rounded-2xl text-sm text-zinc-600 dark:text-zinc-400 italic backdrop-blur-sm">
                       "{selectedRec.reason}"
                     </div>
                   </section>
@@ -1325,7 +1362,7 @@ export default function App() {
                 {selectedRec.category === 'Food' && selectedRec.details?.address && (
                   <section>
                     <h4 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-3">Location</h4>
-                    <div className="flex items-center gap-3 text-sm text-zinc-600 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-800 p-4 rounded-2xl border border-zinc-100 dark:border-zinc-700">
+                    <div className="flex items-center gap-3 text-sm text-zinc-600 dark:text-zinc-400 bg-white/20 dark:bg-zinc-900/40 p-4 rounded-2xl border border-white/10 dark:border-zinc-800/50 backdrop-blur-sm">
                       <MapPin size={18} className="text-rose-500" />
                       {selectedRec.details.address}
                     </div>
@@ -1349,8 +1386,8 @@ export default function App() {
       {/* Profile Modal */}
       <Modal isOpen={isProfileOpen} onClose={() => { setIsProfileOpen(false); setIsEditingProfile(false); }}>
         {user && (
-          <div className="flex flex-col bg-white dark:bg-zinc-900 min-h-full">
-            <div className="h-32 bg-zinc-900 dark:bg-zinc-800 flex-shrink-0 relative overflow-hidden">
+          <div className="flex flex-col bg-transparent min-h-full">
+            <div className="h-32 bg-rose-500/10 dark:bg-rose-500/20 flex-shrink-0 relative overflow-hidden backdrop-blur-md border-b border-white/10">
               {user.profile_photo && (
                 <img src={user.profile_photo} alt="Cover" className="w-full h-full object-cover opacity-30 blur-sm" referrerPolicy="no-referrer" />
               )}
@@ -1358,7 +1395,10 @@ export default function App() {
             <div className="px-8 pb-8 -mt-12">
               <div className="flex items-end justify-between mb-8">
                 <div
-                  className={`w-24 h-24 bg-white dark:bg-zinc-900 rounded-3xl border-4 border-white dark:border-zinc-900 shadow-xl overflow-hidden flex items-center justify-center text-3xl font-bold text-zinc-900 dark:text-white relative bg-zinc-100 dark:bg-zinc-800 ${isEditingProfile ? 'cursor-pointer group' : ''}`}
+                  className={cn(
+                    "w-24 h-24 rounded-[32px] border-4 border-white/20 dark:border-zinc-800/50 shadow-2xl overflow-hidden flex items-center justify-center text-3xl font-bold text-zinc-900 dark:text-white relative bg-white/20 dark:bg-zinc-800/40 backdrop-blur-md",
+                    isEditingProfile && "cursor-pointer group"
+                  )}
                   onClick={() => isEditingProfile && fileInputRef.current?.click()}
                 >
                   {isEditingProfile && (
@@ -1377,7 +1417,7 @@ export default function App() {
                 </div>
                 <button
                   onClick={() => setIsEditingProfile(!isEditingProfile)}
-                  className="px-6 py-2 border border-zinc-100 dark:border-zinc-700 bg-white dark:bg-zinc-800 rounded-xl text-sm font-bold hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-all dark:text-white shadow-sm"
+                  className="px-6 py-2 border border-white/10 dark:border-zinc-700/30 bg-white/20 dark:bg-zinc-800/40 backdrop-blur-md rounded-xl text-sm font-bold hover:bg-white/40 dark:hover:bg-zinc-700/60 transition-all dark:text-white shadow-sm"
                 >
                   {isEditingProfile ? 'Cancel' : 'Edit Profile'}
                 </button>
@@ -1397,7 +1437,7 @@ export default function App() {
                     <textarea
                       value={editForm.bio}
                       onChange={(e) => setEditForm({ ...editForm, bio: e.target.value })}
-                      className="w-full p-4 bg-zinc-50 dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 rounded-2xl focus:outline-none focus:ring-2 focus:ring-zinc-900/10 dark:focus:ring-white/10 transition-all text-sm dark:text-white"
+                      className="w-full p-4 bg-white/20 dark:bg-zinc-800/40 backdrop-blur-sm border border-white/10 dark:border-zinc-700/30 rounded-2xl focus:outline-none focus:ring-2 focus:ring-rose-500/20 transition-all text-sm dark:text-white"
                       rows={3}
                     />
                   </div>
@@ -1407,7 +1447,7 @@ export default function App() {
                     <h4 className="text-sm font-bold text-zinc-900 dark:text-white">Edit Preferences</h4>
 
                     {(['genres', 'dietary', 'interests'] as const).map(prefType => (
-                      <div key={prefType} className="bg-zinc-50 dark:bg-zinc-800 p-4 rounded-2xl border border-zinc-100 dark:border-zinc-700">
+                      <div key={prefType} className="bg-white/20 dark:bg-zinc-900/40 backdrop-blur-sm p-4 rounded-2xl border border-white/10 dark:border-zinc-800/50">
                         <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-3 block">{prefType}</label>
                         <div className="flex flex-wrap gap-2 mb-3">
                           {editForm.preferences[prefType].map(tag => (
@@ -1456,7 +1496,7 @@ export default function App() {
                       handleUpdateProfile(editForm.bio, editForm.profile_photo, editForm.preferences);
                       setIsEditingProfile(false);
                     }}
-                    className="w-full mt-6 py-4 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl font-bold hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-all shadow-lg"
+                    className="w-full mt-6 py-4 bg-zinc-900/80 dark:bg-white/80 backdrop-blur-md text-white dark:text-zinc-900 rounded-2xl font-bold hover:bg-zinc-900 dark:hover:bg-white transition-all shadow-xl border border-white/10 dark:border-zinc-800/50"
                   >
                     Save Profile
                   </button>
@@ -1515,8 +1555,8 @@ export default function App() {
                       {user.bookmarks && user.bookmarks.length > 0 ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                           {user.bookmarks.map(rec => (
-                            <div key={rec.id} className="group relative flex gap-3 p-3 bg-zinc-50 dark:bg-zinc-800 rounded-2xl border border-zinc-100 dark:border-zinc-700 hover:border-zinc-300 dark:hover:border-zinc-500 transition-all cursor-pointer" onClick={() => setSelectedRec(rec)}>
-                              <div className="w-10 h-10 rounded-xl flex-shrink-0 bg-zinc-200 dark:bg-zinc-900 flex items-center justify-center">
+                            <div key={rec.id} className="group relative flex gap-3 p-3 bg-white/20 dark:bg-zinc-900/40 backdrop-blur-sm rounded-2xl border border-white/10 dark:border-zinc-800/50 hover:bg-white/40 dark:hover:bg-zinc-800/60 transition-all cursor-pointer" onClick={() => setSelectedRec(rec)}>
+                              <div className="w-10 h-10 rounded-xl flex-shrink-0 bg-white/30 dark:bg-zinc-800/40 backdrop-blur-md flex items-center justify-center border border-white/10 dark:border-zinc-700/30">
                                 <Sparkles size={16} className="text-zinc-400" />
                               </div>
                               <div className="flex flex-col justify-center overflow-hidden">
@@ -1635,9 +1675,9 @@ export default function App() {
 
       {/* Talk to the Card Chat Modal */}
       <Modal isOpen={isChatOpen} onClose={() => setIsChatOpen(false)}>
-        <div className="flex flex-col h-[600px] max-h-[80vh] bg-white dark:bg-zinc-900 overflow-hidden">
+        <div className="flex flex-col h-[600px] max-h-[80vh] bg-transparent overflow-hidden">
           {/* Chat Header */}
-          <div className="p-6 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-800/50">
+          <div className="p-6 border-b border-white/10 dark:border-zinc-800/50 flex items-center justify-between bg-white/20 dark:bg-zinc-900/40 backdrop-blur-md">
             <div className="flex items-center gap-4">
               <div className="w-10 h-10 rounded-xl bg-zinc-900 dark:bg-white flex items-center justify-center text-white dark:text-zinc-900">
                 <Sparkles size={18} />
@@ -1682,9 +1722,9 @@ export default function App() {
               >
                 <div className={cn(
                   "max-w-[80%] rounded-2xl px-4 py-3 text-sm font-medium leading-relaxed shadow-sm",
-                  msg.role === 'user' 
-                    ? "bg-rose-500 text-white rounded-tr-none" 
-                    : "bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 rounded-tl-none border border-zinc-200/50 dark:border-zinc-700/50"
+                  msg.role === 'user'
+                    ? "bg-rose-500/80 backdrop-blur-md text-white rounded-tr-none shadow-lg shadow-rose-500/20"
+                    : "bg-white/40 dark:bg-zinc-800/40 backdrop-blur-md text-zinc-800 dark:text-zinc-200 rounded-tl-none border border-white/20 dark:border-zinc-700/30"
                 )}>
                   {msg.role === 'assistant' ? (
                     <div className="whitespace-pre-wrap break-words">
@@ -1692,11 +1732,11 @@ export default function App() {
                         const match = part.match(/\[(.*?)\]\((.*?)\)/);
                         if (match) {
                           return (
-                            <a 
-                              key={index} 
-                              href={match[2]} 
-                              target="_blank" 
-                              rel="noopener noreferrer" 
+                            <a
+                              key={index}
+                              href={match[2]}
+                              target="_blank"
+                              rel="noopener noreferrer"
                               className="text-rose-600 dark:text-rose-400 font-bold underline hover:text-rose-700 dark:hover:text-rose-300 transition-colors"
                             >
                               {match[1]}
@@ -1746,10 +1786,10 @@ export default function App() {
       </Modal>
 
       {/* Footer */}
-      <footer className="max-w-7xl mx-auto px-6 py-12 border-t border-zinc-100 flex flex-col md:flex-row items-center justify-between gap-8 text-zinc-400 text-xs font-medium uppercase tracking-widest">
+      <footer className="max-w-7xl mx-auto px-6 py-12 border-t border-zinc-100 dark:border-zinc-800 flex flex-col md:flex-row items-center justify-between gap-8 text-zinc-400 text-xs font-medium uppercase tracking-widest">
         <div className="flex items-center gap-6">
           <span>© 2026 Electa</span>
-          <span className="w-1 h-1 rounded-full bg-zinc-200" />
+          <span className="w-1 h-1 rounded-full bg-zinc-200 dark:bg-zinc-700" />
           <span>Powered by Gemini 3.0</span>
         </div>
         <div className="flex items-center gap-8">
@@ -1761,12 +1801,6 @@ export default function App() {
           </div>
         </div>
       </footer>
-
-      <style>{`
-        body {
-          background-color: #F8F9FA;
-        }
-      `}</style>
     </div>
   );
 }
