@@ -104,7 +104,7 @@ const Modal = ({ isOpen, onClose, children }: { isOpen: boolean, onClose: () => 
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
           className="fixed inset-0 z-[60] flex items-center justify-center pointer-events-none p-4"
         >
-          <div className="bg-white/60 dark:bg-zinc-900/60 backdrop-blur-2xl w-full max-w-2xl rounded-[32px] overflow-hidden shadow-2xl dark:shadow-2xl dark:shadow-black/50 pointer-events-auto flex flex-col max-h-[90vh] relative border border-white/20 dark:border-zinc-800/50">
+          <div className="bg-white/20 dark:bg-zinc-950/40 backdrop-blur-3xl w-full max-w-2xl rounded-[40px] overflow-hidden shadow-2xl dark:shadow-2xl dark:shadow-black/50 pointer-events-auto flex flex-col max-h-[90vh] relative border border-white/20 dark:border-zinc-800/50">
             <button
               onClick={onClose}
               className="absolute top-6 right-6 p-2 bg-black/20 hover:bg-black/40 backdrop-blur-md text-white rounded-full z-50 transition-colors"
@@ -162,7 +162,7 @@ const RecCard = ({
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       whileHover={{ y: -4 }}
-      className="bg-white/30 dark:bg-zinc-800/30 backdrop-blur-md rounded-3xl border border-white/20 dark:border-zinc-700/30 shadow-sm hover:shadow-xl dark:hover:shadow-2xl dark:hover:shadow-black/30 transition-all group cursor-pointer flex flex-col h-full relative"
+      className="group relative bg-white/40 dark:bg-zinc-900/40 backdrop-blur-md rounded-[40px] border border-white/20 dark:border-zinc-800/50 shadow-xl shadow-zinc-200/50 dark:shadow-black/50 hover:shadow-2xl hover:shadow-rose-500/10 transition-all duration-500 cursor-pointer overflow-hidden flex flex-col h-full"
       onClick={onClick}
     >
       <div className="p-6 flex-1 flex flex-col">
@@ -1310,19 +1310,19 @@ export default function App() {
       <Modal isOpen={!!selectedRec} onClose={() => setSelectedRec(null)}>
         {selectedRec && (
           <div className="flex flex-col bg-transparent min-h-full">
-            <div className="h-32 flex-shrink-0 relative bg-rose-500/10 dark:bg-rose-500/20 flex items-center px-8 backdrop-blur-md border-b border-white/10">
+            <div className="h-32 flex-shrink-0 relative bg-white/5 dark:bg-black/20 flex items-center px-8 backdrop-blur-md border-b border-white/10">
               <div>
-                <span className="px-3 py-1 bg-white/10 backdrop-blur-md rounded-full text-[10px] font-bold uppercase tracking-widest text-white border border-white/10 mb-3 inline-block">
+                <span className="px-3 py-1 bg-rose-500/20 backdrop-blur-md rounded-full text-[10px] font-bold uppercase tracking-widest text-rose-600 dark:text-rose-400 border border-rose-500/30 mb-3 inline-block">
                   {selectedRec.category}
                 </span>
-                <h2 className="text-3xl font-bold text-white tracking-tight">{selectedRec.title}</h2>
+                <h2 className="text-3xl font-bold text-zinc-900 dark:text-white tracking-tight">{selectedRec.title}</h2>
               </div>
             </div>
             <div className="p-8">
               <div className="flex items-center justify-between mb-6">
                 <div className="flex items-center gap-4">
                   {selectedRec.details?.rating && (
-                    <div className="flex items-center gap-1 text-amber-500 font-bold bg-amber-50 dark:bg-amber-900/30 px-3 py-1 rounded-full border border-amber-100 dark:border-amber-900/50">
+                    <div className="flex items-center gap-1 text-amber-500 font-bold bg-amber-500/10 dark:bg-amber-500/20 px-3 py-1 rounded-full border border-amber-500/20">
                       <Star size={18} fill="currentColor" /> {selectedRec.details.rating}
                     </div>
                   )}
@@ -1341,7 +1341,7 @@ export default function App() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <section>
                     <h4 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-3">AI Reasoning</h4>
-                    <div className="p-4 bg-white/20 dark:bg-zinc-900/40 border border-white/10 dark:border-zinc-800/50 rounded-2xl text-sm text-zinc-600 dark:text-zinc-400 italic backdrop-blur-sm">
+                    <div className="p-4 bg-white/40 dark:bg-zinc-900/60 border border-white/10 dark:border-zinc-800/50 rounded-2xl text-sm text-zinc-600 dark:text-zinc-400 italic backdrop-blur-sm">
                       "{selectedRec.reason}"
                     </div>
                   </section>
@@ -1350,7 +1350,7 @@ export default function App() {
                       <h4 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-3">Tags</h4>
                       <div className="flex flex-wrap gap-2">
                         {selectedRec.details.tags.map(tag => (
-                          <span key={tag} className="px-3 py-1 bg-zinc-100 dark:bg-zinc-700 rounded-lg text-xs font-medium text-zinc-600 dark:text-zinc-300">
+                          <span key={tag} className="px-3 py-1 bg-white/30 dark:bg-zinc-800/40 backdrop-blur-md border border-white/10 dark:border-zinc-700/30 rounded-lg text-xs font-medium text-zinc-600 dark:text-zinc-300">
                             #{tag}
                           </span>
                         ))}
@@ -1370,10 +1370,10 @@ export default function App() {
                 )}
               </div>
 
-              <div className="flex items-center gap-4 mt-12 pt-8 border-t border-zinc-100 dark:border-zinc-700">
+              <div className="flex items-center gap-4 mt-12 pt-8 border-t border-white/10 dark:border-zinc-800/50">
                 <button
                   onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(selectedRec.title)}`, '_blank')}
-                  className="flex-1 py-4 bg-zinc-900 dark:bg-white text-white dark:text-zinc-900 rounded-2xl font-bold hover:bg-zinc-800 dark:hover:bg-zinc-100 transition-all flex items-center justify-center gap-2 shadow-lg shadow-zinc-200 dark:shadow-white/10"
+                  className="flex-1 py-4 bg-rose-500/90 dark:bg-rose-500/80 backdrop-blur-md text-white rounded-[24px] font-bold transition-all flex items-center justify-center gap-2 shadow-xl shadow-rose-500/20 border border-rose-400/20"
                 >
                   Explore Now <ExternalLink size={18} />
                 </button>
@@ -1387,7 +1387,7 @@ export default function App() {
       <Modal isOpen={isProfileOpen} onClose={() => { setIsProfileOpen(false); setIsEditingProfile(false); }}>
         {user && (
           <div className="flex flex-col bg-transparent min-h-full">
-            <div className="h-32 bg-rose-500/10 dark:bg-rose-500/20 flex-shrink-0 relative overflow-hidden backdrop-blur-md border-b border-white/10">
+            <div className="h-32 bg-white/5 dark:bg-black/20 flex-shrink-0 relative overflow-hidden backdrop-blur-md border-b border-white/10">
               {user.profile_photo && (
                 <img src={user.profile_photo} alt="Cover" className="w-full h-full object-cover opacity-30 blur-sm" referrerPolicy="no-referrer" />
               )}

@@ -9,10 +9,19 @@ lerna-debug.log*
 
 # Node modules
 node_modules
+
+# Dependency lock files
+package-lock.json
+yarn.lock
+pnpm-lock.yaml
+
+# Build and Vercel
 dist
 dist-ssr
-*.local
 .vercel
+.npm
+.vite/
+.eslintcache
 
 # Editor directories and files
 .vscode/*
