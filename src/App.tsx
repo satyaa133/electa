@@ -1583,8 +1583,8 @@ export default function App() {
                     <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">
                       Something went wrong
                     </h3>
-                    <p className="text-zinc-500 dark:text-zinc-400 font-mono text-sm max-w-md mt-1 p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-lg border border-zinc-100 dark:border-zinc-800">
-                      {apiError}
+                    <p className="text-zinc-500 dark:text-zinc-400 font-medium text-sm mt-2">
+                      We're sorry, but we couldn't fetch your recommendations right now. Please try again later.
                     </p>
                   </motion.div>
                 )
