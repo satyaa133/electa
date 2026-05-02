@@ -1,5 +1,5 @@
 import crypto from "crypto";
-import { logger } from "./logger";
+import { logger } from "./logger.js";
 
 export class SecureApiKeyManager {
   private keys: string[];

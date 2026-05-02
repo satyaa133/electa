@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from "express";
-import { SessionManager } from "../auth/sessionManager";
-import { logger } from "../config/logger";
+import { SessionManager } from "../auth/sessionManager.js";
+import { logger } from "../config/logger.js";
 
 export interface AuthenticatedRequest extends Request {
   user?: {

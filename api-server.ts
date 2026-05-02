@@ -1,4 +1,4 @@
-import app from './api/index';
+import app from './api/index.js';
 import dotenv from 'dotenv';
 
 dotenv.config({ path: '.env.local' });

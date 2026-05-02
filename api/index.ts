@@ -5,7 +5,7 @@ import bcrypt from "bcryptjs";
 import axios from "axios";
 import { neon } from "@neondatabase/serverless";
 import { GoogleGenerativeAI } from "@google/generative-ai";
-import { OriginValidator } from "./middleware/originValidator";
+import { OriginValidator } from "./middleware/originValidator.js";
 
 const originConfig = {
   allowedOrigins: [
@@ -17,7 +17,7 @@ const originConfig = {
 };
 const originValidator = new OriginValidator(originConfig);
 
-import { createApiKeyManager } from "./config/apiKeyManager";
+import { createApiKeyManager } from "./config/apiKeyManager.js";
 
 const sql = (strings: TemplateStringsArray, ...values: any[]) => {
   const url = process.env.DATABASE_URL || process.env.POSTGRES_URL;
@@ -101,30 +101,30 @@ async function generateContentWithRetry(
 }
 
 import cookieParser from "cookie-parser";
-import { SessionManager } from "./auth/sessionManager";
+import { SessionManager } from "./auth/sessionManager.js";
 import {
   createAuthMiddleware,
   AuthenticatedRequest,
-} from "./middleware/authMiddleware";
-import { setupSecurityHeaders } from "./middleware/securityHeaders";
-import { setupCORS } from "./middleware/cors";
+} from "./middleware/authMiddleware.js";
+import { setupSecurityHeaders } from "./middleware/securityHeaders.js";
+import { setupCORS } from "./middleware/cors.js";
 import {
   apiLimiter,
   authLimiter,
   geminiLimiter,
-} from "./middleware/rateLimiter";
+} from "./middleware/rateLimiter.js";
 import {
   signupValidators,
   loginValidators,
   userUpdateValidators,
   handleValidationErrors,
-} from "./middleware/validators";
-import { logger } from "./config/logger";
+} from "./middleware/validators.js";
+import { logger } from "./config/logger.js";
 import {
   csrfProtection,
   csrfTokenHandler,
   csrfErrorHandler,
-} from "./middleware/csrf";
+} from "./middleware/csrf.js";
 
 const sessionManager = new SessionManager(
   process.env.JWT_ACCESS_SECRET || "dev-access-secret",
