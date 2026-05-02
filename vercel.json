@@ -3,11 +3,7 @@
   "installCommand": "npm install",
   "outputDirectory": "dist",
   "framework": "vite",
-  "functions": {
-    "api/**/*.ts": {
-      "maxDuration": 60
-    }
-  },
+
   "rewrites": [
     {
       "source": "/api/recommendations",
