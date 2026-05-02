@@ -13,6 +13,9 @@ export const corsOptions: cors.CorsOptions = {
 
     if (allowedOrigins.includes(origin)) {
       callback(null, true);
+    } else if (origin.endsWith('.vercel.app')) {
+      // Automatically allow all Vercel preview/production domains
+      callback(null, true);
     } else {
       callback(new Error(`CORS policy: origin ${origin} not allowed`));
     }

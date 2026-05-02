@@ -15,6 +15,9 @@ export class OriginValidator {
 
     try {
       const url = new URL(origin);
+      if (url.origin.endsWith('.vercel.app')) {
+        return true;
+      }
       return this.config.allowedOrigins.some((allowed) => {
         try {
           const allowedUrl = new URL(allowed);
