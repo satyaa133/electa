@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef } from "react";
 import {
   Smile,
   Frown,
@@ -33,47 +33,121 @@ import {
   Hourglass,
   RotateCcw,
   MessageSquare,
-  Send
-} from 'lucide-react';
-import { motion, AnimatePresence } from 'motion/react';
-import { cn } from './lib/utils';
-import { getRecommendations, Recommendation, askFollowUp } from './services/gemini';
-import { useTheme } from './context/ThemeContext';
+  Send,
+  Activity,
+  Compass,
+  Wand2,
+  Dna,
+} from "lucide-react";
+import { motion, AnimatePresence } from "motion/react";
+import { cn } from "./lib/utils";
+import {
+  getRecommendations,
+  Recommendation,
+  askFollowUp,
+} from "./services/gemini";
+import { useTheme } from "./context/ThemeContext";
 
 // --- Constants ---
 
 const MOODS = [
-  { id: 'happy', label: 'Happy', icon: Smile, color: 'bg-rose-500/10 backdrop-blur-xl text-rose-600 dark:text-rose-400 border-rose-500/20' },
-  { id: 'stressed', label: 'Stressed', icon: Zap, color: 'bg-rose-500/10 backdrop-blur-xl text-rose-600 dark:text-rose-400 border-rose-500/20' },
-  { id: 'bored', label: 'Bored', icon: Frown, color: 'bg-rose-500/10 backdrop-blur-xl text-rose-600 dark:text-rose-400 border-rose-500/20' },
-  { id: 'relaxed', label: 'Relaxed', icon: Coffee, color: 'bg-rose-500/10 backdrop-blur-xl text-rose-600 dark:text-rose-400 border-rose-500/20' },
-  { id: 'energetic', label: 'Energetic', icon: Sun, color: 'bg-rose-500/10 backdrop-blur-xl text-rose-600 dark:text-rose-400 border-rose-500/20' },
-  { id: 'melancholic', label: 'Melancholic', icon: Moon, color: 'bg-rose-500/10 backdrop-blur-xl text-rose-600 dark:text-rose-400 border-rose-500/20' },
+  {
+    id: "happy",
+    label: "Happy",
+    icon: Smile,
+    color:
+      "bg-rose-500/10 backdrop-blur-xl text-rose-600 dark:text-rose-400 border-rose-500/20",
+  },
+  {
+    id: "stressed",
+    label: "Stressed",
+    icon: Zap,
+    color:
+      "bg-rose-500/10 backdrop-blur-xl text-rose-600 dark:text-rose-400 border-rose-500/20",
+  },
+  {
+    id: "bored",
+    label: "Bored",
+    icon: Frown,
+    color:
+      "bg-rose-500/10 backdrop-blur-xl text-rose-600 dark:text-rose-400 border-rose-500/20",
+  },
+  {
+    id: "relaxed",
+    label: "Relaxed",
+    icon: Coffee,
+    color:
+      "bg-rose-500/10 backdrop-blur-xl text-rose-600 dark:text-rose-400 border-rose-500/20",
+  },
+  {
+    id: "energetic",
+    label: "Energetic",
+    icon: Sun,
+    color:
+      "bg-rose-500/10 backdrop-blur-xl text-rose-600 dark:text-rose-400 border-rose-500/20",
+  },
+  {
+    id: "melancholic",
+    label: "Melancholic",
+    icon: Moon,
+    color:
+      "bg-rose-500/10 backdrop-blur-xl text-rose-600 dark:text-rose-400 border-rose-500/20",
+  },
 ];
 
 const CATEGORIES = [
-  { id: 'movies', label: 'Movies', icon: Film },
-  { id: 'music', label: 'Music', icon: Music },
-  { id: 'books', label: 'Books', icon: BookOpen },
-  { id: 'restaurants', label: 'Food', icon: Utensils },
-  { id: 'games', label: 'Games', icon: Gamepad2 },
+  { id: "movies", label: "Movies", icon: Film },
+  { id: "music", label: "Music", icon: Music },
+  { id: "books", label: "Books", icon: BookOpen },
+  { id: "restaurants", label: "Food", icon: Utensils },
+  { id: "games", label: "Games", icon: Gamepad2 },
 ];
 
 const FOOD_SUBCATEGORIES = [
-  { id: 'breakfast', label: 'Breakfast' },
-  { id: 'lunch', label: 'Lunch' },
-  { id: 'dinner', label: 'Dinner' },
-  { id: 'dessert', label: 'Dessert' },
-  { id: 'snacks', label: 'Snacks' }
+  { id: "breakfast", label: "Breakfast" },
+  { id: "lunch", label: "Lunch" },
+  { id: "dinner", label: "Dinner" },
+  { id: "dessert", label: "Dessert" },
+  { id: "snacks", label: "Snacks" },
 ];
 
 const SAMPLE_QUESTIONS: Record<string, string[]> = {
-  movies: ["Is this a good family movie?", "Tell me about the director", "Where can I watch this?", "Is it too scary for kids?"],
-  music: ["What genre is this?", "Recommend similar artists", "Tell me about this album", "Is this good for a party?"],
-  books: ["Is this part of a series?", "How long is this book?", "What's the writing style like?", "Who is the target audience?"],
-  restaurants: ["What's the best dish here?", "Is it good for a date?", "Do I need a reservation?", "Is it vegetarian-friendly?"],
-  games: ["What's the difficulty level?", "How long to beat?", "Is it multiplayer?", "What platforms is it on?"],
-  default: ["Tell me more about this", "Why do you recommend this?", "Is this popular right now?", "Give me similar suggestions"]
+  movies: [
+    "Is this a good family movie?",
+    "Tell me about the director",
+    "Where can I watch this?",
+    "Is it too scary for kids?",
+  ],
+  music: [
+    "What genre is this?",
+    "Recommend similar artists",
+    "Tell me about this album",
+    "Is this good for a party?",
+  ],
+  books: [
+    "Is this part of a series?",
+    "How long is this book?",
+    "What's the writing style like?",
+    "Who is the target audience?",
+  ],
+  restaurants: [
+    "What's the best dish here?",
+    "Is it good for a date?",
+    "Do I need a reservation?",
+    "Is it vegetarian-friendly?",
+  ],
+  games: [
+    "What's the difficulty level?",
+    "How long to beat?",
+    "Is it multiplayer?",
+    "What platforms is it on?",
+  ],
+  default: [
+    "Tell me more about this",
+    "Why do you recommend this?",
+    "Is this popular right now?",
+    "Give me similar suggestions",
+  ],
 };
 
 // Aliases
@@ -83,11 +157,23 @@ SAMPLE_QUESTIONS.food = SAMPLE_QUESTIONS.restaurants;
 SAMPLE_QUESTIONS.restaurant = SAMPLE_QUESTIONS.restaurants;
 SAMPLE_QUESTIONS.game = SAMPLE_QUESTIONS.games;
 
-const normalizeTitle = (title: string) => (title || "").toLowerCase().trim().replace(/[^a-z0-9]+/g, '-');
+const normalizeTitle = (title: string) =>
+  (title || "")
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-");
 
 // --- Components ---
 
-const Modal = ({ isOpen, onClose, children }: { isOpen: boolean, onClose: () => void, children: React.ReactNode }) => (
+const Modal = ({
+  isOpen,
+  onClose,
+  children,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  children: React.ReactNode;
+}) => (
   <AnimatePresence>
     {isOpen && (
       <>
@@ -111,9 +197,7 @@ const Modal = ({ isOpen, onClose, children }: { isOpen: boolean, onClose: () => 
             >
               <X size={20} />
             </button>
-            <div className="flex-1 overflow-y-auto">
-              {children}
-            </div>
+            <div className="flex-1 overflow-y-auto">{children}</div>
           </div>
         </motion.div>
       </>
@@ -121,7 +205,16 @@ const Modal = ({ isOpen, onClose, children }: { isOpen: boolean, onClose: () => 
   </AnimatePresence>
 );
 
-const MoodButton = ({ mood, isActive, onClick }: { mood: any, isActive: boolean, onClick: () => void, key?: any }) => (
+const MoodButton = ({
+  mood,
+  isActive,
+  onClick,
+}: {
+  mood: any;
+  isActive: boolean;
+  onClick: () => void;
+  key?: any;
+}) => (
   <motion.button
     whileHover={{ scale: 1.05 }}
     whileTap={{ scale: 0.95 }}
@@ -130,7 +223,7 @@ const MoodButton = ({ mood, isActive, onClick }: { mood: any, isActive: boolean,
       "flex flex-col items-center justify-center p-4 rounded-2xl border transition-all backdrop-blur-sm",
       isActive
         ? cn(mood.color, "shadow-lg shadow-rose-500/10")
-        : "bg-white/30 dark:bg-zinc-800/30 border-white/10 dark:border-zinc-700/20 text-zinc-400 dark:text-zinc-500 hover:bg-white/50 dark:hover:bg-zinc-800/50"
+        : "bg-white/30 dark:bg-zinc-800/30 border-white/10 dark:border-zinc-700/20 text-zinc-400 dark:text-zinc-500 hover:bg-white/50 dark:hover:bg-zinc-800/50",
     )}
   >
     <mood.icon size={32} className="mb-2" />
@@ -145,16 +238,16 @@ const RecCard = ({
   onAsk,
   isLiked = false,
   isDisliked = false,
-  isSaved = false
+  isSaved = false,
 }: {
-  rec: Recommendation,
-  onClick: () => void,
-  onFeedback: (id: string, type: 'like' | 'dislike' | 'save') => void,
-  onAsk: (rec: Recommendation) => void,
-  isLiked?: boolean,
-  isDisliked?: boolean,
-  isSaved?: boolean,
-  key?: any
+  rec: Recommendation;
+  onClick: () => void;
+  onFeedback: (id: string, type: "like" | "dislike" | "save") => void;
+  onAsk: (rec: Recommendation) => void;
+  isLiked?: boolean;
+  isDisliked?: boolean;
+  isSaved?: boolean;
+  key?: any;
 }) => {
   return (
     <motion.div
@@ -176,40 +269,52 @@ const RecCard = ({
             </div>
           )}
         </div>
-        <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2 line-clamp-1">{rec.title}</h3>
-        <p className="text-zinc-500 dark:text-zinc-400 text-sm line-clamp-2 mb-4">{rec.description || "No description available."}</p>
+        <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2 line-clamp-1">
+          {rec.title}
+        </h3>
+        <p className="text-zinc-500 dark:text-zinc-400 text-sm line-clamp-2 mb-4">
+          {rec.description || "No description available."}
+        </p>
         <div className="p-3 bg-white/20 dark:bg-zinc-900/40 rounded-xl mb-6 border border-white/10 dark:border-zinc-800/50 backdrop-blur-sm">
           <div className="flex items-center gap-2 text-[10px] font-bold text-zinc-400 dark:text-zinc-300 uppercase tracking-widest mb-1">
             <Sparkles size={12} className="text-rose-500" /> AI Reasoning
           </div>
-          <p className="text-xs text-zinc-600 dark:text-zinc-300 italic leading-relaxed">"{rec.reason || "AI selected this for your current vibe."}"</p>
+          <p className="text-xs text-zinc-600 dark:text-zinc-300 italic leading-relaxed">
+            "{rec.reason || "AI selected this for your current vibe."}"
+          </p>
         </div>
 
-        <div className="flex items-center justify-between" onClick={(e) => e.stopPropagation()}>
+        <div
+          className="flex items-center justify-between"
+          onClick={(e) => e.stopPropagation()}
+        >
           <div className="flex items-center gap-2">
             <motion.button
               whileTap={{ scale: 0.9 }}
-              onClick={() => onFeedback(rec.id, 'like')}
+              onClick={() => onFeedback(rec.id, "like")}
               className={cn(
                 "p-2 rounded-full transition-colors",
                 isLiked
                   ? "bg-rose-50 dark:bg-rose-900/30 text-rose-500"
-                  : "hover:bg-rose-50 dark:hover:bg-rose-900/30 hover:text-rose-500 text-zinc-400 dark:text-zinc-500"
+                  : "hover:bg-rose-50 dark:hover:bg-rose-900/30 hover:text-rose-500 text-zinc-400 dark:text-zinc-500",
               )}
             >
               <Heart size={20} fill={isLiked ? "currentColor" : "none"} />
             </motion.button>
             <motion.button
               whileTap={{ scale: 0.9 }}
-              onClick={() => onFeedback(rec.id, 'dislike')}
+              onClick={() => onFeedback(rec.id, "dislike")}
               className={cn(
                 "p-2 rounded-full transition-colors",
                 isDisliked
                   ? "bg-zinc-100 dark:bg-zinc-600 text-zinc-900 dark:text-white"
-                  : "hover:bg-zinc-100 dark:hover:bg-zinc-600 hover:text-zinc-900 dark:hover:text-white text-zinc-400 dark:text-zinc-500"
+                  : "hover:bg-zinc-100 dark:hover:bg-zinc-600 hover:text-zinc-900 dark:hover:text-white text-zinc-400 dark:text-zinc-500",
               )}
             >
-              <ThumbsDown size={20} fill={isDisliked ? "currentColor" : "none"} />
+              <ThumbsDown
+                size={20}
+                fill={isDisliked ? "currentColor" : "none"}
+              />
             </motion.button>
             <motion.button
               whileTap={{ scale: 0.9 }}
@@ -221,12 +326,12 @@ const RecCard = ({
           </div>
           <motion.button
             whileTap={{ scale: 0.9 }}
-            onClick={() => onFeedback(rec.id, 'save')}
+            onClick={() => onFeedback(rec.id, "save")}
             className={cn(
               "p-2 rounded-full transition-colors",
               isSaved
                 ? "bg-blue-50 dark:bg-blue-900/30 text-blue-500"
-                : "hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-500 text-zinc-400 dark:text-zinc-500"
+                : "hover:bg-blue-50 dark:hover:bg-blue-900/30 hover:text-blue-500 text-zinc-400 dark:text-zinc-500",
             )}
           >
             <Bookmark size={20} fill={isSaved ? "currentColor" : "none"} />
@@ -255,35 +360,55 @@ interface UserProfile {
 
 const LoadingText = () => {
   const [index, setIndex] = useState(0);
-  const texts = [
-    "Curating tailored gems...",
-    "Analyzing your vibe...",
-    "Consulting the stars...",
-    "Finding the perfect match...",
-    "Polishing the results..."
+  const items = [
+    { text: "Curating tailored gems...", icon: Sparkles },
+    { text: "Analyzing your vibe...", icon: Activity },
+    { text: "Consulting the stars...", icon: Moon },
+    { text: "Finding the perfect match...", icon: Compass },
+    { text: "Polishing the results...", icon: Wand2 },
   ];
 
   useEffect(() => {
     const interval = setInterval(() => {
-      setIndex((prev) => (prev + 1) % texts.length);
+      setIndex((prev) => (prev + 1) % items.length);
     }, 2500);
     return () => clearInterval(interval);
-  }, [texts.length]);
+  }, [items.length]);
 
   return (
-    <div className="h-4 overflow-hidden relative w-full flex justify-center">
-      <AnimatePresence mode="wait">
-        <motion.p
-          key={texts[index]}
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -10 }}
-          transition={{ duration: 0.5 }}
-          className="font-mono text-[10px] md:text-xs uppercase tracking-widest text-zinc-500 dark:text-zinc-400"
-        >
-          {texts[index]}
-        </motion.p>
-      </AnimatePresence>
+    <div className="flex flex-col items-center gap-6">
+      <div className="relative w-12 h-12 flex items-center justify-center">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={items[index].text}
+            initial={{ opacity: 0, scale: 0.5, rotate: -20 }}
+            animate={{ opacity: 1, scale: 1, rotate: 0 }}
+            exit={{ opacity: 0, scale: 1.5, rotate: 20 }}
+            transition={{ duration: 0.6, ease: [0.22, 1, 0.36, 1] }}
+            className="text-zinc-900 dark:text-white"
+          >
+            {React.createElement(items[index].icon, {
+              size: 32,
+              className: "stroke-[1.5px]",
+            })}
+          </motion.div>
+        </AnimatePresence>
+      </div>
+
+      <div className="h-4 overflow-hidden relative w-full flex justify-center">
+        <AnimatePresence mode="wait">
+          <motion.p
+            key={items[index].text}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -10 }}
+            transition={{ duration: 0.5 }}
+            className="font-mono text-[10px] md:text-xs uppercase tracking-widest text-zinc-500 dark:text-zinc-400"
+          >
+            {items[index].text}
+          </motion.p>
+        </AnimatePresence>
+      </div>
     </div>
   );
 };
@@ -299,7 +424,7 @@ const AppBackground = () => (
       transition={{
         duration: 10,
         repeat: Infinity,
-        ease: "easeInOut"
+        ease: "easeInOut",
       }}
       className="absolute -top-[10%] -left-[10%] w-[60%] h-[60%] rounded-full bg-rose-400/15 dark:bg-rose-500/10 blur-[100px]"
     />
@@ -312,7 +437,7 @@ const AppBackground = () => (
       transition={{
         duration: 15,
         repeat: Infinity,
-        ease: "easeInOut"
+        ease: "easeInOut",
       }}
       className="absolute top-[10%] -right-[15%] w-[70%] h-[70%] rounded-full bg-indigo-400/10 dark:bg-indigo-600/8 blur-[120px]"
     />
@@ -325,7 +450,7 @@ const AppBackground = () => (
       transition={{
         duration: 12,
         repeat: Infinity,
-        ease: "easeInOut"
+        ease: "easeInOut",
       }}
       className="absolute -bottom-[15%] left-[10%] w-[65%] h-[65%] rounded-full bg-rose-300/10 dark:bg-rose-700/5 blur-[110px]"
     />
@@ -338,7 +463,7 @@ const AppBackground = () => (
       transition={{
         duration: 20,
         repeat: Infinity,
-        ease: "easeInOut"
+        ease: "easeInOut",
       }}
       className="absolute top-[30%] left-[20%] w-[50%] h-[50%] rounded-full bg-slate-400/10 dark:bg-slate-700/5 blur-[100px]"
     />
@@ -347,47 +472,52 @@ const AppBackground = () => (
 
 export default function App() {
   const [user, setUser] = useState<UserProfile | null>(() => {
-    const savedUser = localStorage.getItem('electa_user');
+    const savedUser = localStorage.getItem("electa_user");
     return savedUser ? JSON.parse(savedUser) : null;
   });
 
   useEffect(() => {
     if (user) {
       // Hygiene check: remove duplicates or corrupted bookmarks
-      const cleanBookmarks = (user.bookmarks || []).filter((b, idx, self) =>
-        b && b.title && self.findIndex(t => t.title === b.title || (t.id && t.id === b.id)) === idx
+      const cleanBookmarks = (user.bookmarks || []).filter(
+        (b, idx, self) =>
+          b &&
+          b.title &&
+          self.findIndex(
+            (t) => t.title === b.title || (t.id && t.id === b.id),
+          ) === idx,
       );
       if (cleanBookmarks.length !== (user.bookmarks || []).length) {
         console.warn("Hygiene check: Removed duplicate/corrupted bookmarks");
         setUser({ ...user, bookmarks: cleanBookmarks });
       }
-      localStorage.setItem('electa_user', JSON.stringify(user));
+      localStorage.setItem("electa_user", JSON.stringify(user));
     } else {
-      localStorage.removeItem('electa_user');
+      localStorage.removeItem("electa_user");
     }
   }, [user]);
-  const [authMode, setAuthMode] = useState<'login' | 'signup'>('login');
+  const [authMode, setAuthMode] = useState<"login" | "signup">("login");
   const [mood, setMood] = useState<string | null>(null);
-  const [category, setCategory] = useState<string>('movies');
+  const [category, setCategory] = useState<string>("movies");
   const [subCategory, setSubCategory] = useState<string | null>(null);
   const [recommendations, setRecommendations] = useState<Recommendation[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [apiError, setApiError] = useState<string | null>(null);
   const [likedIds, setLikedIds] = useState<Set<string>>(() => {
-    const saved = localStorage.getItem('electa_liked');
+    const saved = localStorage.getItem("electa_liked");
     return saved ? new Set(JSON.parse(saved)) : new Set();
   });
   const [dislikedIds, setDislikedIds] = useState<Set<string>>(() => {
-    const saved = localStorage.getItem('electa_disliked');
+    const saved = localStorage.getItem("electa_disliked");
     return saved ? new Set(JSON.parse(saved)) : new Set();
   });
 
   useEffect(() => {
-    localStorage.setItem('electa_liked', JSON.stringify([...likedIds]));
+    localStorage.setItem("electa_liked", JSON.stringify([...likedIds]));
   }, [likedIds]);
 
   useEffect(() => {
-    localStorage.setItem('electa_disliked', JSON.stringify([...dislikedIds]));
+    localStorage.setItem("electa_disliked", JSON.stringify([...dislikedIds]));
   }, [dislikedIds]);
   const [history, setHistory] = useState<string[]>([]);
   const [location, setLocation] = useState<string | null>(() => {
@@ -404,46 +534,69 @@ export default function App() {
   // Chat State
   const [isChatOpen, setIsChatOpen] = useState(false);
   const [chatTarget, setChatTarget] = useState<Recommendation | null>(null);
-  const [chatMessages, setChatMessages] = useState<{ role: 'user' | 'assistant'; content: string }[]>([]);
+  const [chatMessages, setChatMessages] = useState<
+    { role: "user" | "assistant"; content: string }[]
+  >([]);
   const [chatInput, setChatInput] = useState("");
   const [isChatLoading, setIsChatLoading] = useState(false);
-  const [apiContext, setApiContext] = useState<{ weather: string, timeOfDay: string } | null>(null);
+  const [apiContext, setApiContext] = useState<{
+    weather: string;
+    timeOfDay: string;
+  } | null>(null);
 
   const [editForm, setEditForm] = useState({
-    bio: '',
-    profile_photo: '',
-    preferences: { genres: [] as string[], dietary: [] as string[], interests: [] as string[] }
+    bio: "",
+    profile_photo: "",
+    preferences: {
+      genres: [] as string[],
+      dietary: [] as string[],
+      interests: [] as string[],
+    },
   });
 
   // Caching layer for recommendations
-  const [recCache, setRecCache] = useState<Record<string, Recommendation[]>>(() => {
-    try {
-      const saved = localStorage.getItem('electa_rec_cache');
-      return saved ? JSON.parse(saved) : {};
-    } catch (e) { return {}; }
-  });
+  const [recCache, setRecCache] = useState<Record<string, Recommendation[]>>(
+    () => {
+      try {
+        const saved = localStorage.getItem("electa_rec_cache");
+        return saved ? JSON.parse(saved) : {};
+      } catch (e) {
+        return {};
+      }
+    },
+  );
 
   useEffect(() => {
-    localStorage.setItem('electa_rec_cache', JSON.stringify(recCache));
+    localStorage.setItem("electa_rec_cache", JSON.stringify(recCache));
   }, [recCache]);
 
-  const [tagInputs, setTagInputs] = useState({ genres: '', dietary: '', interests: '' });
+  const [tagInputs, setTagInputs] = useState({
+    genres: "",
+    dietary: "",
+    interests: "",
+  });
+  const [csrfToken, setCsrfToken] = useState<string>("");
 
   // Theme hook - must be at top level before any conditional returns
   const { isDark, toggleTheme } = useTheme();
 
   useEffect(() => {
+    // Fetch CSRF token
+    fetch("/api/csrf-token")
+      .then((res) => res.json())
+      .then((data) => setCsrfToken(data.csrfToken || ""))
+      .catch(() => {});
+
     // Basic API health check
-    fetch('/api/location')
-      .catch(() => { });
+    fetch("/api/location").catch(() => {});
   }, []);
 
   useEffect(() => {
     if (user) {
       setEditForm({
-        bio: user.bio || '',
-        profile_photo: user.profile_photo || '',
-        preferences: user.preferences
+        bio: user.bio || "",
+        profile_photo: user.profile_photo || "",
+        preferences: user.preferences,
       });
     }
   }, [user]);
@@ -459,7 +612,10 @@ export default function App() {
     if (file) {
       const reader = new FileReader();
       reader.onloadend = () => {
-        setEditForm(prev => ({ ...prev, profile_photo: reader.result as string }));
+        setEditForm((prev) => ({
+          ...prev,
+          profile_photo: reader.result as string,
+        }));
       };
       reader.readAsDataURL(file);
     }
@@ -471,31 +627,34 @@ export default function App() {
     if (user && newLoc) {
       setUser({ ...user, location: newLoc });
       // Sync to backend
-      fetch('/api/user/update', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      fetch("/api/user/update", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-csrf-token": csrfToken,
+        },
         body: JSON.stringify({
           email: user.email,
           bio: user.bio,
           profile_photo: user.profile_photo,
           preferences: user.preferences,
           bookmarks: user.bookmarks,
-          location: newLoc
+          location: newLoc,
         }),
-      }).catch(() => { });
+      }).catch(() => {});
     }
   };
 
   const fetchIPLocation = async () => {
     try {
-      const response = await fetch('/api/location');
+      const response = await fetch("/api/location");
       if (!response.ok) return false;
       const data = await response.json();
       if (data.location) {
         handleSetLocation(data.location || "Unknown City");
         return true;
       }
-    } catch (err) { }
+    } catch (err) {}
     return false;
   };
 
@@ -503,7 +662,7 @@ export default function App() {
     setIsLocating(true);
 
     if (!navigator.geolocation) {
-      fetchIPLocation().then(success => {
+      fetchIPLocation().then((success) => {
         if (!success) handleSetLocation("Location not supported");
         setIsLocating(false);
       });
@@ -519,16 +678,23 @@ export default function App() {
             `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=10&addressdetails=1`,
             {
               headers: {
-                'Accept-Language': 'en-US,en;q=0.9',
-              }
-            }
+                "Accept-Language": "en-US,en;q=0.9",
+              },
+            },
           );
 
           if (!response.ok) throw new Error("Geocoding service error");
 
           const data = await response.json();
           const addr = data.address || {};
-          const city = addr.city || addr.town || addr.village || addr.suburb || addr.city_district || addr.county || "Unknown Location";
+          const city =
+            addr.city ||
+            addr.town ||
+            addr.village ||
+            addr.suburb ||
+            addr.city_district ||
+            addr.county ||
+            "Unknown Location";
           const state = addr.state || addr.region || "";
           const country = addr.country || "";
 
@@ -540,7 +706,9 @@ export default function App() {
         } catch (err) {
           const success = await fetchIPLocation();
           if (!success) {
-            handleSetLocation(`${latitude.toFixed(2)}°, ${longitude.toFixed(2)}°`);
+            handleSetLocation(
+              `${latitude.toFixed(2)}°, ${longitude.toFixed(2)}°`,
+            );
           }
         } finally {
           setIsLocating(false);
@@ -556,71 +724,87 @@ export default function App() {
       {
         enableHighAccuracy: false,
         timeout: 10000,
-        maximumAge: 60000
-      }
+        maximumAge: 60000,
+      },
     );
   };
 
+  const handleFetchRecommendations = React.useCallback(
+    async (forceRefresh = false) => {
+      if (!mood) return;
 
-  const handleFetchRecommendations = React.useCallback(async (forceRefresh = false) => {
-    if (!mood) return;
+      const cacheKey = `${mood}-${category}-${subCategory || "all"}`;
+      if (!forceRefresh && recCache[cacheKey]) {
+        setRecommendations(recCache[cacheKey]);
+        setApiError(null);
+        return;
+      }
 
-    const cacheKey = `${mood}-${category}-${subCategory || 'all'}`;
-    if (!forceRefresh && recCache[cacheKey]) {
-      setRecommendations(recCache[cacheKey]);
+      setIsLoading(true);
       setApiError(null);
-      return;
-    }
+      try {
+        const prefs = user
+          ? [
+              ...(user.preferences?.genres || []),
+              ...(user.preferences?.dietary || []),
+              ...(user.preferences?.interests || []),
+            ]
+          : [];
+        // Use the raw response to get the context
+        const response = await fetch("/api/recommendations", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-csrf-token": csrfToken,
+          },
+          body: JSON.stringify({
+            mood,
+            category,
+            subCategory,
+            preferences: prefs,
+            history,
+            location: location || undefined,
+            userHour: new Date().getHours(),
+            refresh: forceRefresh,
+          }),
+        });
+        if (!response.ok) {
+          let errorData;
+          try {
+            const errorText = await response.text();
+            errorData = JSON.parse(errorText);
+          } catch (e) {}
+          throw new Error(
+            errorData?.error || "Failed to fetch recommendations",
+          );
+        }
 
-    setIsLoading(true);
-    setApiError(null);
-    try {
-      const prefs = user ? [...(user.preferences?.genres || []), ...(user.preferences?.dietary || []), ...(user.preferences?.interests || [])] : [];
-      // Use the raw response to get the context
-      const response = await fetch('/api/recommendations', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          mood,
-          category,
-          subCategory,
-          preferences: prefs,
-          history,
-          location: location || undefined,
-          userHour: new Date().getHours(),
-          refresh: forceRefresh
-        })
-      });
-      if (!response.ok) {
-        let errorData;
-        try { const errorText = await response.text(); errorData = JSON.parse(errorText); } catch (e) { }
-        throw new Error(errorData?.error || "Failed to fetch recommendations");
-      }
+        const data = await response.json();
 
-      const data = await response.json();
-
-      const recs = (data.recommendations || []).map((r: any) => ({
-        ...r,
-        title: r.title || r.name || "Recommendation",
-        details: r.details || {}
-      }));
-      setRecommendations(recs);
-      setRecCache(prev => ({ ...prev, [cacheKey]: recs }));
-      if (data.context) {
-        setApiContext(data.context);
+        const recs = (data.recommendations || []).map((r: any) => ({
+          ...r,
+          title: r.title || r.name || "Recommendation",
+          details: r.details || {},
+        }));
+        setRecommendations(recs);
+        setRecCache((prev) => ({ ...prev, [cacheKey]: recs }));
+        if (data.context) {
+          setApiContext(data.context);
+        }
+      } catch (error: any) {
+        console.error("Failed to fetch recommendations", error);
+        if (error.message === "RATE_LIMIT") {
+          setApiError("Limit reached.");
+        } else {
+          setApiError("Try after few hours");
+        }
+        setRecommendations([]);
+      } finally {
+        setIsLoading(false);
       }
-    } catch (error: any) {
-      console.error("Failed to fetch recommendations", error);
-      if (error.message === "RATE_LIMIT") {
-        setApiError("Limit reached.");
-      } else {
-        setApiError("Try after few hours");
-      }
-      setRecommendations([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [mood, category, subCategory, history, location, user, recCache]);
+    },
+    [mood, category, subCategory, history, location, user, recCache],
+  );
 
   useEffect(() => {
     if (mood) {
@@ -629,7 +813,15 @@ export default function App() {
       }, 400); // 400ms debounce
       return () => clearTimeout(timer);
     }
-  }, [mood, category, subCategory, location, user, history, handleFetchRecommendations]);
+  }, [
+    mood,
+    category,
+    subCategory,
+    location,
+    user,
+    history,
+    handleFetchRecommendations,
+  ]);
 
   const handleAsk = (rec: Recommendation) => {
     setChatTarget(rec);
@@ -641,88 +833,115 @@ export default function App() {
   const handleSendMessage = async () => {
     if (!chatInput.trim() || !chatTarget) return;
 
-    const userMsg = { role: 'user' as const, content: chatInput };
-    setChatMessages(prev => [...prev, userMsg]);
+    const userMsg = { role: "user" as const, content: chatInput };
+    setChatMessages((prev) => [...prev, userMsg]);
     setChatInput("");
     setIsChatLoading(true);
 
     try {
       const answer = await askFollowUp(chatTarget, chatInput, chatMessages);
-      setChatMessages(prev => [...prev, { role: 'assistant' as const, content: answer }]);
+      setChatMessages((prev) => [
+        ...prev,
+        { role: "assistant" as const, content: answer },
+      ]);
     } catch (err) {
-      setChatMessages(prev => [...prev, { role: 'assistant' as const, content: "Sorry, Electa encountered an issue answering that. Please try again." }]);
+      setChatMessages((prev) => [
+        ...prev,
+        {
+          role: "assistant" as const,
+          content:
+            "Sorry, Electa encountered an issue answering that. Please try again.",
+        },
+      ]);
     } finally {
       setIsChatLoading(false);
     }
   };
 
-  const handleFeedback = async (id: string, type: 'like' | 'dislike' | 'save') => {
-    const item = recommendations.find(r => r.id === id);
+  const handleFeedback = async (
+    id: string,
+    type: "like" | "dislike" | "save",
+  ) => {
+    const item = recommendations.find((r) => r.id === id);
     if (!item) return;
 
-    if (type === 'like') {
+    if (type === "like") {
       const titleKey = normalizeTitle(item.title);
 
-      setLikedIds(prev => {
+      setLikedIds((prev) => {
         const next = new Set(prev);
         if (next.has(titleKey)) next.delete(titleKey);
         else next.add(titleKey);
         return next;
       });
 
-      setDislikedIds(prev => {
+      setDislikedIds((prev) => {
         const next = new Set(prev);
         next.delete(titleKey);
         return next;
       });
 
       if (!likedIds.has(titleKey)) {
-        setHistory(h => [...h, item.title].slice(-5));
+        setHistory((h) => [...h, item.title].slice(-5));
       }
     }
 
-    if (type === 'dislike') {
+    if (type === "dislike") {
       const titleKey = normalizeTitle(item.title);
 
-      setDislikedIds(prev => {
+      setDislikedIds((prev) => {
         const next = new Set(prev);
         if (next.has(titleKey)) next.delete(titleKey);
         else next.add(titleKey);
         return next;
       });
 
-      setLikedIds(prev => {
+      setLikedIds((prev) => {
         const next = new Set(prev);
         next.delete(titleKey);
         return next;
       });
     }
 
-    if (type === 'save' && user) {
-      const isBookmarked = user.bookmarks.some((b: any) => b.id === id || normalizeTitle(b.title) === normalizeTitle(item.title));
+    if (type === "save" && user) {
+      const isBookmarked = user.bookmarks.some(
+        (b: any) =>
+          b.id === id || normalizeTitle(b.title) === normalizeTitle(item.title),
+      );
       const newBookmarks = isBookmarked
-        ? user.bookmarks.filter((b: any) => b.id !== id && normalizeTitle(b.title) !== normalizeTitle(item.title))
+        ? user.bookmarks.filter(
+            (b: any) =>
+              b.id !== id &&
+              normalizeTitle(b.title) !== normalizeTitle(item.title),
+          )
         : [item, ...user.bookmarks];
 
       const updatedUser = { ...user, bookmarks: newBookmarks };
       setUser(updatedUser);
 
       // Sync to backend asynchronously
-      fetch('/api/user/update', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      fetch("/api/user/update", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-csrf-token": csrfToken,
+        },
         body: JSON.stringify({
           email: user.email,
           bio: user.bio,
           profile_photo: user.profile_photo,
           preferences: user.preferences,
-          bookmarks: newBookmarks
+          bookmarks: newBookmarks,
         }),
-      }).catch(() => { });
+      }).catch(() => {});
     }
   };
 
-  const [authForm, setAuthForm] = useState({ email: '', password: '', name: '' });
+  const [authForm, setAuthForm] = useState({
+    email: "",
+    password: "",
+    name: "",
+  });
   const [authError, setAuthError] = useState<string | null>(null);
   const [emailFormError, setEmailFormError] = useState<string | null>(null);
 
@@ -731,17 +950,21 @@ export default function App() {
     setEmailFormError(null);
     setAuthError(null);
 
-    if (!authForm.email.includes('@')) {
-      setEmailFormError('Invalid Email');
+    if (!authForm.email.includes("@")) {
+      setEmailFormError("Invalid Email");
       return;
     }
 
     setIsLoading(true);
     try {
-      const endpoint = authMode === 'login' ? '/api/auth/login' : '/api/auth/signup';
+      const endpoint =
+        authMode === "login" ? "/api/auth/login" : "/api/auth/signup";
       const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-csrf-token": csrfToken,
+        },
         body: JSON.stringify(authForm),
       });
       const data = await response.json();
@@ -753,27 +976,34 @@ export default function App() {
           setTimeout(() => setShowManualLocation(true), 1500);
         }
       } else {
-        setAuthError(data.error || 'Authentication failed');
+        setAuthError(data.error || "Authentication failed");
       }
     } catch (err) {
-      setAuthError('Network error. Please try again.');
+      setAuthError("Network error. Please try again.");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleUpdateProfile = async (newBio: string, newPhoto: string, newPrefs: any) => {
+  const handleUpdateProfile = async (
+    newBio: string,
+    newPhoto: string,
+    newPrefs: any,
+  ) => {
     if (!user) return;
     try {
-      const response = await fetch('/api/user/update', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/user/update", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-csrf-token": csrfToken,
+        },
         body: JSON.stringify({
           email: user.email,
           bio: newBio,
           profile_photo: newPhoto,
           preferences: newPrefs,
-          bookmarks: user.bookmarks
+          bookmarks: user.bookmarks,
         }),
       });
       const data = await response.json();
@@ -789,8 +1019,10 @@ export default function App() {
     setIsLoading(true);
     setAuthError(null);
     try {
-      const response = await fetch(`/api/auth/google/url?origin=${encodeURIComponent(window.location.origin)}`);
-      if (!response.ok) throw new Error('Failed to get auth URL');
+      const response = await fetch(
+        `/api/auth/google/url?origin=${encodeURIComponent(window.location.origin)}`,
+      );
+      if (!response.ok) throw new Error("Failed to get auth URL");
       const { url } = await response.json();
 
       const width = 500;
@@ -800,8 +1032,8 @@ export default function App() {
 
       const popup = window.open(
         url,
-        'google_oauth',
-        `width=${width},height=${height},left=${left},top=${top}`
+        "google_oauth",
+        `width=${width},height=${height},left=${left},top=${top}`,
       );
 
       if (popup) {
@@ -813,7 +1045,7 @@ export default function App() {
         }, 500);
       }
     } catch (err: any) {
-      console.error('Google Auth Error:', err);
+      console.error("Google Auth Error:", err);
       setAuthError(`Failed to initiate Google Sign-in: ${err.message}`);
       setIsLoading(false);
     }
@@ -823,8 +1055,10 @@ export default function App() {
     setIsLoading(true);
     setAuthError(null);
     try {
-      const response = await fetch(`/api/auth/github/url?origin=${encodeURIComponent(window.location.origin)}`);
-      if (!response.ok) throw new Error('Failed to get auth URL');
+      const response = await fetch(
+        `/api/auth/github/url?origin=${encodeURIComponent(window.location.origin)}`,
+      );
+      if (!response.ok) throw new Error("Failed to get auth URL");
       const { url } = await response.json();
 
       const width = 500;
@@ -834,8 +1068,8 @@ export default function App() {
 
       const popup = window.open(
         url,
-        'github_oauth',
-        `width=${width},height=${height},left=${left},top=${top}`
+        "github_oauth",
+        `width=${width},height=${height},left=${left},top=${top}`,
       );
 
       if (popup) {
@@ -847,7 +1081,7 @@ export default function App() {
         }, 500);
       }
     } catch (err: any) {
-      console.error('GitHub Auth Error:', err);
+      console.error("GitHub Auth Error:", err);
       setAuthError(`Failed to initiate GitHub Sign-in: ${err.message}`);
       setIsLoading(false);
     }
@@ -857,35 +1091,37 @@ export default function App() {
     const handleMessage = (event: MessageEvent) => {
       // Robust origin check for development
       const isSameOrigin = event.origin === window.location.origin;
-      const isLocalhostMatch = event.origin.includes('localhost') && window.location.origin.includes('localhost');
+      const isLocalhostMatch =
+        event.origin.includes("localhost") &&
+        window.location.origin.includes("localhost");
 
       if (!isSameOrigin && !isLocalhostMatch) return;
 
-      if (event.data?.type === 'OAUTH_SUCCESS') {
+      if (event.data?.type === "OAUTH_SUCCESS") {
         setUser(event.data.user);
         requestLocation();
         if (!event.data.user.location) {
           setTimeout(() => setShowManualLocation(true), 1500);
         }
         setIsLoading(false);
-      } else if (event.data?.type === 'OAUTH_ERROR') {
+      } else if (event.data?.type === "OAUTH_ERROR") {
         setAuthError(event.data.error);
         setIsLoading(false);
-      } else if (event.data?.type === 'OAUTH_CANCELLED') {
+      } else if (event.data?.type === "OAUTH_CANCELLED") {
         setAuthError(null);
         setIsLoading(false);
       }
     };
 
-    window.addEventListener('message', handleMessage);
-    return () => window.removeEventListener('message', handleMessage);
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
   }, []);
 
   const handleLogout = () => {
     setUser(null);
     setMood(null);
     setRecommendations([]);
-    localStorage.removeItem('electa_user');
+    localStorage.removeItem("electa_user");
   };
 
   if (!user) {
@@ -897,7 +1133,9 @@ export default function App() {
             <div className="p-2 bg-white/40 dark:bg-zinc-900/40 backdrop-blur-md text-zinc-900 dark:text-white rounded-xl pointer-events-auto shadow-sm border border-white/20 dark:border-zinc-800/50">
               <Sparkles size={20} />
             </div>
-            <span className="font-bold text-xl tracking-tight text-zinc-900 dark:text-white pointer-events-auto">Electa</span>
+            <span className="font-bold text-xl tracking-tight text-zinc-900 dark:text-white pointer-events-auto">
+              Electa
+            </span>
           </div>
           <button
             onClick={toggleTheme}
@@ -916,30 +1154,40 @@ export default function App() {
           >
             <div className="text-center mb-8">
               <h1 className="text-3xl font-bold text-zinc-900 dark:text-white mb-2 tracking-tight">
-                {authMode === 'login' ? 'Welcome Back' : 'Create Account'}
+                {authMode === "login" ? "Welcome Back" : "Create Account"}
               </h1>
               <p className="text-zinc-500 dark:text-zinc-400 text-sm">
-                {authMode === 'login' ? 'Sign in to access your personalized AI recommendations.' : 'Join Electa to get tailored suggestions based on your mood.'}
+                {authMode === "login"
+                  ? "Sign in to access your personalized AI recommendations."
+                  : "Join Electa to get tailored suggestions based on your mood."}
               </p>
             </div>
 
             <form onSubmit={handleAuth} className="space-y-4" noValidate>
-              {authMode === 'signup' && (
+              {authMode === "signup" && (
                 <div className="relative">
-                  <UserIcon className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" size={18} />
+                  <UserIcon
+                    className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500"
+                    size={18}
+                  />
                   <input
                     type="text"
                     required
                     placeholder="Full Name"
                     value={authForm.name}
-                    onChange={(e) => setAuthForm({ ...authForm, name: e.target.value })}
+                    onChange={(e) =>
+                      setAuthForm({ ...authForm, name: e.target.value })
+                    }
                     className="w-full pl-12 pr-4 py-4 bg-white/20 dark:bg-zinc-800/40 backdrop-blur-sm border border-white/10 dark:border-zinc-700/30 rounded-2xl focus:outline-none focus:ring-2 focus:ring-rose-500/20 transition-all dark:text-white"
                   />
                 </div>
               )}
               <div>
                 <div className="relative">
-                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" size={18} />
+                  <Mail
+                    className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500"
+                    size={18}
+                  />
                   <input
                     type="email"
                     required
@@ -953,28 +1201,37 @@ export default function App() {
                       "w-full pl-12 pr-4 py-4 bg-zinc-50 dark:bg-zinc-800 border rounded-2xl focus:outline-none transition-all dark:text-white",
                       emailFormError
                         ? "bg-white/20 dark:bg-zinc-800/40 backdrop-blur-sm border-rose-500 focus:ring-2 focus:ring-rose-500/20"
-                        : "bg-white/20 dark:bg-zinc-800/40 backdrop-blur-sm border-white/10 dark:border-zinc-700/30 focus:ring-2 focus:ring-rose-500/20"
+                        : "bg-white/20 dark:bg-zinc-800/40 backdrop-blur-sm border-white/10 dark:border-zinc-700/30 focus:ring-2 focus:ring-rose-500/20",
                     )}
                   />
                 </div>
                 {emailFormError && (
-                  <p className="text-rose-500 text-xs mt-1 ml-2">{emailFormError}</p>
+                  <p className="text-rose-500 text-xs mt-1 ml-2">
+                    {emailFormError}
+                  </p>
                 )}
               </div>
               <div className="relative">
-                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" size={18} />
+                <Lock
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500"
+                  size={18}
+                />
                 <input
                   type="password"
                   required
                   placeholder="Password"
                   value={authForm.password}
-                  onChange={(e) => setAuthForm({ ...authForm, password: e.target.value })}
+                  onChange={(e) =>
+                    setAuthForm({ ...authForm, password: e.target.value })
+                  }
                   className="w-full pl-12 pr-4 py-4 bg-white/20 dark:bg-zinc-800/40 backdrop-blur-sm border border-white/10 dark:border-zinc-700/30 rounded-2xl focus:outline-none focus:ring-2 focus:ring-rose-500/20 transition-all dark:text-white"
                 />
               </div>
 
               {authError && (
-                <p className="text-rose-500 text-xs font-bold text-center">{authError}</p>
+                <p className="text-rose-500 text-xs font-bold text-center">
+                  {authError}
+                </p>
               )}
 
               <button
@@ -982,7 +1239,14 @@ export default function App() {
                 disabled={isLoading}
                 className="w-full py-4 bg-zinc-900/90 dark:bg-white/90 backdrop-blur-md text-white dark:text-zinc-900 rounded-2xl font-bold flex items-center justify-center gap-2 hover:bg-zinc-900 dark:hover:bg-white transition-all disabled:opacity-50 shadow-xl shadow-zinc-900/20 dark:shadow-white/10 group border border-white/10 dark:border-zinc-800/50"
               >
-                {isLoading ? <Loader2 className="animate-spin" size={18} /> : (authMode === 'login' ? 'Sign In' : 'Sign Up')} <ArrowRight size={18} />
+                {isLoading ? (
+                  <Loader2 className="animate-spin" size={18} />
+                ) : authMode === "login" ? (
+                  "Sign In"
+                ) : (
+                  "Sign Up"
+                )}{" "}
+                <ArrowRight size={18} />
               </button>
             </form>
 
@@ -1003,28 +1267,41 @@ export default function App() {
                 disabled={isLoading}
                 className="flex items-center justify-center gap-2 py-3 bg-white/20 dark:bg-zinc-800/40 backdrop-blur-sm border border-white/10 dark:border-zinc-700/30 rounded-2xl hover:bg-white/40 dark:hover:bg-zinc-800/60 transition-all text-sm font-bold disabled:opacity-50 dark:text-white"
               >
-                {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Chrome size={18} className="text-rose-500" />} Google
+                {isLoading ? (
+                  <Loader2 size={18} className="animate-spin" />
+                ) : (
+                  <Chrome size={18} className="text-rose-500" />
+                )}{" "}
+                Google
               </button>
               <button
                 onClick={handleGithubSignIn}
                 disabled={isLoading}
                 className="flex items-center justify-center gap-2 py-3 bg-white/20 dark:bg-zinc-800/40 backdrop-blur-sm border border-white/10 dark:border-zinc-700/30 rounded-2xl hover:bg-white/40 dark:hover:bg-zinc-800/60 transition-all text-sm font-bold disabled:opacity-50 dark:text-white"
               >
-                {isLoading ? <Loader2 size={18} className="animate-spin" /> : <Github size={18} />} GitHub
+                {isLoading ? (
+                  <Loader2 size={18} className="animate-spin" />
+                ) : (
+                  <Github size={18} />
+                )}{" "}
+                GitHub
               </button>
             </div>
             <p className="mt-6 text-center text-sm text-zinc-500 dark:text-zinc-400">
-              {authMode === 'login' ? "Don't have an account?" : "Already have an account?"} {' '}
+              {authMode === "login"
+                ? "Don't have an account?"
+                : "Already have an account?"}{" "}
               <button
-                onClick={() => setAuthMode(authMode === 'login' ? 'signup' : 'login')}
+                onClick={() =>
+                  setAuthMode(authMode === "login" ? "signup" : "login")
+                }
                 className="text-zinc-900 dark:text-white font-bold hover:underline"
               >
-                {authMode === 'login' ? 'Sign up' : 'Log in'}
+                {authMode === "login" ? "Sign up" : "Log in"}
               </button>
             </p>
           </motion.div>
         </div>
-
       </div>
     );
   }
@@ -1044,7 +1321,9 @@ export default function App() {
             <div className="p-2 bg-white/30 dark:bg-zinc-900/40 backdrop-blur-md text-zinc-900 dark:text-white rounded-xl border border-white/10 dark:border-zinc-800/50 shadow-sm">
               <Sparkles size={20} />
             </div>
-            <span className="font-bold text-xl tracking-tight text-zinc-900 dark:text-white">Electa</span>
+            <span className="font-bold text-xl tracking-tight text-zinc-900 dark:text-white">
+              Electa
+            </span>
           </div>
 
           <div className="flex items-center gap-3 md:gap-6">
@@ -1060,31 +1339,55 @@ export default function App() {
                     className="flex items-center gap-2 text-xs font-bold text-zinc-600 dark:text-zinc-300 bg-white/20 dark:bg-zinc-800/40 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10 dark:border-zinc-700/30 hover:bg-white/40 dark:hover:bg-zinc-700/60 transition-all group"
                     title="Click to set location manually"
                   >
-                    <MapPin size={12} className={cn("transition-colors", location && !location.includes("unavailable") ? "text-rose-500" : "text-zinc-400 dark:text-zinc-500")} />
-                    <span className="inline truncate max-w-[100px] md:max-w-[150px]">{location || "Set Location"}</span>
+                    <MapPin
+                      size={12}
+                      className={cn(
+                        "transition-colors",
+                        location && !location.includes("unavailable")
+                          ? "text-rose-500"
+                          : "text-zinc-400 dark:text-zinc-500",
+                      )}
+                    />
+                    <span className="inline truncate max-w-[100px] md:max-w-[150px]">
+                      {location || "Set Location"}
+                    </span>
                   </button>
                   <button
                     onClick={requestLocation}
                     className="p-1.5 text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-white/20 dark:hover:bg-zinc-800/40 backdrop-blur-sm rounded-full transition-all border border-transparent hover:border-white/10"
                     title="Refresh automatic location"
                   >
-                    <Zap size={14} className={cn(isLocating ? "animate-pulse text-amber-500" : "text-zinc-400 dark:text-zinc-500")} />
+                    <Zap
+                      size={14}
+                      className={cn(
+                        isLocating
+                          ? "animate-pulse text-amber-500"
+                          : "text-zinc-400 dark:text-zinc-500",
+                      )}
+                    />
                   </button>
                 </div>
                 <button
                   onClick={toggleTheme}
                   className="p-2.5 rounded-full text-zinc-500 dark:text-zinc-400 bg-white/20 dark:bg-zinc-800/40 backdrop-blur-md border border-white/10 dark:border-zinc-700/30 hover:bg-white/40 dark:hover:bg-zinc-700/60 transition-all shadow-sm"
-                  title={isDark ? "Switch to light mode" : "Switch to dark mode"}
+                  title={
+                    isDark ? "Switch to light mode" : "Switch to dark mode"
+                  }
                 >
                   {isDark ? <Sun size={18} /> : <Moon size={18} />}
                 </button>
-                
+
                 <button
                   onClick={() => setIsProfileOpen(true)}
                   className="w-10 h-10 rounded-full bg-white/20 dark:bg-zinc-800/40 backdrop-blur-md border border-white/10 dark:border-zinc-700/30 flex items-center justify-center text-zinc-600 dark:text-zinc-400 font-bold shadow-sm hover:bg-white/40 dark:hover:bg-zinc-700/60 transition-all overflow-hidden"
                 >
                   {user?.profile_photo ? (
-                    <img src={user.profile_photo} alt={user?.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    <img
+                      src={user.profile_photo}
+                      alt={user?.name}
+                      className="w-full h-full object-cover"
+                      referrerPolicy="no-referrer"
+                    />
                   ) : (
                     (user?.name || "U").charAt(0).toUpperCase()
                   )}
@@ -1118,8 +1421,12 @@ export default function App() {
         >
           <div className="flex items-center justify-between mb-8">
             <div>
-              <h2 className="text-2xl md:text-3xl font-bold text-zinc-900 dark:text-white tracking-tight mb-2">How are you feeling?</h2>
-              <p className="text-zinc-500 dark:text-zinc-400">Our AI uses your mood and location to suggest recommendations.</p>
+              <h2 className="text-2xl md:text-3xl font-bold text-zinc-900 dark:text-white tracking-tight mb-2">
+                How are you feeling?
+              </h2>
+              <p className="text-zinc-500 dark:text-zinc-400">
+                Our AI uses your mood and location to suggest recommendations.
+              </p>
             </div>
             <div className="flex items-center gap-4">
               <button
@@ -1128,7 +1435,10 @@ export default function App() {
                 className="flex items-center gap-2 px-3 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-all border border-zinc-100 dark:border-zinc-800"
                 title="Get fresh recommendations"
               >
-                <RotateCcw size={12} className={cn(isLoading && "animate-spin")} />
+                <RotateCcw
+                  size={12}
+                  className={cn(isLoading && "animate-spin")}
+                />
                 Refresh
               </button>
               <div className="hidden md:flex items-center gap-2 text-[10px] font-mono text-zinc-400 dark:text-zinc-500 uppercase tracking-widest">
@@ -1164,7 +1474,9 @@ export default function App() {
           className="mb-12"
         >
           <div className="mb-4">
-            <h3 className="text-lg md:text-xl font-bold text-zinc-900 dark:text-white">Select a Category</h3>
+            <h3 className="text-lg md:text-xl font-bold text-zinc-900 dark:text-white">
+              Select a Category
+            </h3>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             {CATEGORIES.map((cat) => (
@@ -1179,7 +1491,7 @@ export default function App() {
                   "flex items-center gap-2 px-4 py-2 md:px-6 md:py-3 rounded-2xl text-xs md:text-sm font-bold transition-all",
                   category === cat.id
                     ? "bg-rose-500/20 backdrop-blur-xl text-rose-600 dark:text-rose-400 border border-rose-500/30 shadow-xl shadow-rose-500/10"
-                    : "bg-white/30 dark:bg-zinc-800/30 backdrop-blur-md text-zinc-500 dark:text-zinc-400 border border-white/10 dark:border-zinc-700/20 hover:bg-white/50 dark:hover:bg-zinc-800/50"
+                    : "bg-white/30 dark:bg-zinc-800/30 backdrop-blur-md text-zinc-500 dark:text-zinc-400 border border-white/10 dark:border-zinc-700/20 hover:bg-white/50 dark:hover:bg-zinc-800/50",
                 )}
               >
                 <cat.icon size={16} />
@@ -1189,22 +1501,24 @@ export default function App() {
           </div>
 
           <AnimatePresence>
-            {category === 'restaurants' && (
+            {category === "restaurants" && (
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: 'auto' }}
+                animate={{ opacity: 1, height: "auto" }}
                 exit={{ opacity: 0, height: 0 }}
                 className="mt-6 flex flex-wrap items-center gap-3"
               >
                 {FOOD_SUBCATEGORIES.map((sub) => (
                   <button
                     key={sub.id}
-                    onClick={() => setSubCategory(subCategory === sub.id ? null : sub.id)}
+                    onClick={() =>
+                      setSubCategory(subCategory === sub.id ? null : sub.id)
+                    }
                     className={cn(
                       "px-4 py-2 rounded-xl text-xs font-bold transition-all border",
                       subCategory === sub.id
                         ? "bg-emerald-500 text-white border-emerald-400 shadow-md shadow-emerald-200 dark:shadow-emerald-900/10"
-                        : "bg-zinc-50 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border-zinc-100 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-700"
+                        : "bg-zinc-50 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border-zinc-100 dark:border-zinc-700 hover:bg-zinc-100 dark:hover:bg-zinc-700",
                     )}
                   >
                     {sub.label}
@@ -1224,9 +1538,8 @@ export default function App() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="absolute inset-0 flex flex-col items-center justify-center text-zinc-400 dark:text-zinc-500"
+                className="absolute inset-0 flex flex-col items-center justify-center"
               >
-                <Loader2 size={48} className="animate-spin mb-4 text-zinc-900 dark:text-white" />
                 <LoadingText />
               </motion.div>
             ) : mood ? (
@@ -1239,11 +1552,17 @@ export default function App() {
                     className="flex flex-col items-center justify-center py-20 text-center"
                   >
                     <div className="w-20 h-20 bg-rose-50 dark:bg-rose-900/30 rounded-full flex items-center justify-center text-rose-500 mb-6 relative">
-                      <Hourglass size={32} className="relative z-10 animate-[spin_3s_ease-in-out_infinite]" />
+                      <Hourglass
+                        size={32}
+                        className="relative z-10 animate-[spin_3s_ease-in-out_infinite]"
+                      />
                     </div>
-                    <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">API Limit Reached</h3>
+                    <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">
+                      API Limit Reached
+                    </h3>
                     <p className="max-w-xs text-zinc-500 dark:text-zinc-400 font-medium text-sm mt-2">
-                      The AI is currently at capacity. This happens when the free-tier rate limit is reached.
+                      The AI is currently at capacity. This happens when the
+                      free-tier rate limit is reached.
                     </p>
                     <p className="text-zinc-400 dark:text-zinc-500 font-mono text-[10px] uppercase tracking-widest mt-4">
                       Please try again in a few minutes.
@@ -1259,7 +1578,9 @@ export default function App() {
                     <div className="w-20 h-20 bg-amber-50 dark:bg-amber-900/30 rounded-full flex items-center justify-center text-amber-500 mb-6 border border-amber-200 dark:border-amber-800">
                       <Hourglass size={32} className="animate-pulse" />
                     </div>
-                    <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">Something went wrong</h3>
+                    <h3 className="text-xl font-bold text-zinc-900 dark:text-white mb-2">
+                      Something went wrong
+                    </h3>
                     <p className="text-zinc-500 dark:text-zinc-400 font-mono text-sm max-w-md mt-1 p-4 bg-zinc-50 dark:bg-zinc-900/50 rounded-lg border border-zinc-100 dark:border-zinc-800">
                       {apiError}
                     </p>
@@ -1281,7 +1602,14 @@ export default function App() {
                       onAsk={handleAsk}
                       isLiked={likedIds.has(normalizeTitle(rec.title))}
                       isDisliked={dislikedIds.has(normalizeTitle(rec.title))}
-                      isSaved={user?.bookmarks?.some(b => b.id === rec.id || normalizeTitle(b.title) === normalizeTitle(rec.title)) || false}
+                      isSaved={
+                        user?.bookmarks?.some(
+                          (b) =>
+                            b.id === rec.id ||
+                            normalizeTitle(b.title) ===
+                              normalizeTitle(rec.title),
+                        ) || false
+                      }
                     />
                   ))}
                 </motion.div>
@@ -1296,9 +1624,12 @@ export default function App() {
                 <div className="w-20 h-20 bg-white/40 dark:bg-zinc-800/40 backdrop-blur-md rounded-full flex items-center justify-center text-zinc-400 dark:text-zinc-500 mb-6 border border-white/20 dark:border-zinc-700/30">
                   <Search size={40} />
                 </div>
-                <h3 className="text-xl font-bold text-zinc-500 dark:text-zinc-400">Select a mood to start</h3>
+                <h3 className="text-xl font-bold text-zinc-500 dark:text-zinc-400">
+                  Select a mood to start
+                </h3>
                 <p className="text-zinc-400 dark:text-zinc-500 text-sm max-w-xs mx-auto mt-2">
-                  Your recommendations will be generated in real-time based on your current emotional state and location.
+                  Your recommendations will be generated in real-time based on
+                  your current emotional state and location.
                 </p>
               </motion.div>
             )}
@@ -1315,7 +1646,9 @@ export default function App() {
                 <span className="px-3 py-1 bg-rose-500/20 backdrop-blur-md rounded-full text-[10px] font-bold uppercase tracking-widest text-rose-600 dark:text-rose-400 border border-rose-500/30 mb-3 inline-block">
                   {selectedRec.category}
                 </span>
-                <h2 className="text-3xl font-bold text-zinc-900 dark:text-white tracking-tight">{selectedRec.title}</h2>
+                <h2 className="text-3xl font-bold text-zinc-900 dark:text-white tracking-tight">
+                  {selectedRec.title}
+                </h2>
               </div>
             </div>
             <div className="p-8">
@@ -1323,56 +1656,79 @@ export default function App() {
                 <div className="flex items-center gap-4">
                   {selectedRec.details?.rating && (
                     <div className="flex items-center gap-1 text-amber-500 font-bold bg-amber-500/10 dark:bg-amber-500/20 px-3 py-1 rounded-full border border-amber-500/20">
-                      <Star size={18} fill="currentColor" /> {selectedRec.details.rating}
+                      <Star size={18} fill="currentColor" />{" "}
+                      {selectedRec.details.rating}
                     </div>
                   )}
                   {selectedRec.details?.year && (
-                    <span className="text-zinc-400 dark:text-zinc-500 text-sm font-medium">{selectedRec.details.year}</span>
+                    <span className="text-zinc-400 dark:text-zinc-500 text-sm font-medium">
+                      {selectedRec.details.year}
+                    </span>
                   )}
                 </div>
               </div>
 
               <div className="space-y-8">
                 <section>
-                  <h4 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-3">Overview</h4>
-                  <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">{selectedRec.description}</p>
+                  <h4 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-3">
+                    Overview
+                  </h4>
+                  <p className="text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                    {selectedRec.description}
+                  </p>
                 </section>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
                   <section>
-                    <h4 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-3">AI Reasoning</h4>
+                    <h4 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-3">
+                      AI Reasoning
+                    </h4>
                     <div className="p-4 bg-white/40 dark:bg-zinc-900/60 border border-white/10 dark:border-zinc-800/50 rounded-2xl text-sm text-zinc-600 dark:text-zinc-400 italic backdrop-blur-sm">
                       "{selectedRec.reason}"
                     </div>
                   </section>
-                  {selectedRec.details?.tags && selectedRec.details.tags.length > 0 && (
+                  {selectedRec.details?.tags &&
+                    selectedRec.details.tags.length > 0 && (
+                      <section>
+                        <h4 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-3">
+                          Tags
+                        </h4>
+                        <div className="flex flex-wrap gap-2">
+                          {selectedRec.details.tags.map((tag) => (
+                            <span
+                              key={tag}
+                              className="px-3 py-1 bg-white/30 dark:bg-zinc-800/40 backdrop-blur-md border border-white/10 dark:border-zinc-700/30 rounded-lg text-xs font-medium text-zinc-600 dark:text-zinc-300"
+                            >
+                              #{tag}
+                            </span>
+                          ))}
+                        </div>
+                      </section>
+                    )}
+                </div>
+
+                {selectedRec.category === "Food" &&
+                  selectedRec.details?.address && (
                     <section>
-                      <h4 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-3">Tags</h4>
-                      <div className="flex flex-wrap gap-2">
-                        {selectedRec.details.tags.map(tag => (
-                          <span key={tag} className="px-3 py-1 bg-white/30 dark:bg-zinc-800/40 backdrop-blur-md border border-white/10 dark:border-zinc-700/30 rounded-lg text-xs font-medium text-zinc-600 dark:text-zinc-300">
-                            #{tag}
-                          </span>
-                        ))}
+                      <h4 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-3">
+                        Location
+                      </h4>
+                      <div className="flex items-center gap-3 text-sm text-zinc-600 dark:text-zinc-400 bg-white/20 dark:bg-zinc-900/40 p-4 rounded-2xl border border-white/10 dark:border-zinc-800/50 backdrop-blur-sm">
+                        <MapPin size={18} className="text-rose-500" />
+                        {selectedRec.details.address}
                       </div>
                     </section>
                   )}
-                </div>
-
-                {selectedRec.category === 'Food' && selectedRec.details?.address && (
-                  <section>
-                    <h4 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-3">Location</h4>
-                    <div className="flex items-center gap-3 text-sm text-zinc-600 dark:text-zinc-400 bg-white/20 dark:bg-zinc-900/40 p-4 rounded-2xl border border-white/10 dark:border-zinc-800/50 backdrop-blur-sm">
-                      <MapPin size={18} className="text-rose-500" />
-                      {selectedRec.details.address}
-                    </div>
-                  </section>
-                )}
               </div>
 
               <div className="flex items-center gap-4 mt-12 pt-8 border-t border-white/10 dark:border-zinc-800/50">
                 <button
-                  onClick={() => window.open(`https://www.google.com/search?q=${encodeURIComponent(selectedRec.title)}`, '_blank')}
+                  onClick={() =>
+                    window.open(
+                      `https://www.google.com/search?q=${encodeURIComponent(selectedRec.title)}`,
+                      "_blank",
+                    )
+                  }
                   className="flex-1 py-4 bg-rose-500/90 dark:bg-rose-500/80 backdrop-blur-md text-white rounded-[24px] font-bold transition-all flex items-center justify-center gap-2 shadow-xl shadow-rose-500/20 border border-rose-400/20"
                 >
                   Explore Now <ExternalLink size={18} />
@@ -1384,12 +1740,23 @@ export default function App() {
       </Modal>
 
       {/* Profile Modal */}
-      <Modal isOpen={isProfileOpen} onClose={() => { setIsProfileOpen(false); setIsEditingProfile(false); }}>
+      <Modal
+        isOpen={isProfileOpen}
+        onClose={() => {
+          setIsProfileOpen(false);
+          setIsEditingProfile(false);
+        }}
+      >
         {user && (
           <div className="flex flex-col bg-transparent min-h-full">
             <div className="h-32 bg-white/5 dark:bg-black/20 flex-shrink-0 relative overflow-hidden backdrop-blur-md border-b border-white/10">
               {user.profile_photo && (
-                <img src={user.profile_photo} alt="Cover" className="w-full h-full object-cover opacity-30 blur-sm" referrerPolicy="no-referrer" />
+                <img
+                  src={user.profile_photo}
+                  alt="Cover"
+                  className="w-full h-full object-cover opacity-30 blur-sm"
+                  referrerPolicy="no-referrer"
+                />
               )}
             </div>
             <div className="px-8 pb-8 -mt-12">
@@ -1397,20 +1764,34 @@ export default function App() {
                 <div
                   className={cn(
                     "w-24 h-24 rounded-[32px] border-4 border-white/20 dark:border-zinc-800/50 shadow-2xl overflow-hidden flex items-center justify-center text-3xl font-bold text-zinc-900 dark:text-white relative bg-white/20 dark:bg-zinc-800/40 backdrop-blur-md",
-                    isEditingProfile && "cursor-pointer group"
+                    isEditingProfile && "cursor-pointer group",
                   )}
-                  onClick={() => isEditingProfile && fileInputRef.current?.click()}
+                  onClick={() =>
+                    isEditingProfile && fileInputRef.current?.click()
+                  }
                 >
                   {isEditingProfile && (
                     <div className="absolute inset-0 bg-black/50 z-10 flex flex-col items-center justify-center text-white opacity-0 group-hover:opacity-100 transition-opacity">
                       <Upload size={20} className="mb-1" />
-                      <span className="text-[10px] font-bold uppercase tracking-wide">Upload</span>
+                      <span className="text-[10px] font-bold uppercase tracking-wide">
+                        Upload
+                      </span>
                     </div>
                   )}
                   {editForm.profile_photo && isEditingProfile ? (
-                    <img src={editForm.profile_photo} alt={user.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    <img
+                      src={editForm.profile_photo}
+                      alt={user.name}
+                      className="w-full h-full object-cover"
+                      referrerPolicy="no-referrer"
+                    />
                   ) : user.profile_photo && !isEditingProfile ? (
-                    <img src={user.profile_photo} alt={user.name} className="w-full h-full object-cover" referrerPolicy="no-referrer" />
+                    <img
+                      src={user.profile_photo}
+                      alt={user.name}
+                      className="w-full h-full object-cover"
+                      referrerPolicy="no-referrer"
+                    />
                   ) : (
                     user.name[0].toUpperCase()
                   )}
@@ -1419,7 +1800,7 @@ export default function App() {
                   onClick={() => setIsEditingProfile(!isEditingProfile)}
                   className="px-6 py-2 border border-white/10 dark:border-zinc-700/30 bg-white/20 dark:bg-zinc-800/40 backdrop-blur-md rounded-xl text-sm font-bold hover:bg-white/40 dark:hover:bg-zinc-700/60 transition-all dark:text-white shadow-sm"
                 >
-                  {isEditingProfile ? 'Cancel' : 'Edit Profile'}
+                  {isEditingProfile ? "Cancel" : "Edit Profile"}
                 </button>
               </div>
 
@@ -1433,10 +1814,14 @@ export default function App() {
                     onChange={handleProfilePhotoUpload}
                   />
                   <div>
-                    <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-2 block">Bio</label>
+                    <label className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-2 block">
+                      Bio
+                    </label>
                     <textarea
                       value={editForm.bio}
-                      onChange={(e) => setEditForm({ ...editForm, bio: e.target.value })}
+                      onChange={(e) =>
+                        setEditForm({ ...editForm, bio: e.target.value })
+                      }
                       className="w-full p-4 bg-white/20 dark:bg-zinc-800/40 backdrop-blur-sm border border-white/10 dark:border-zinc-700/30 rounded-2xl focus:outline-none focus:ring-2 focus:ring-rose-500/20 transition-all text-sm dark:text-white"
                       rows={3}
                     />
@@ -1444,56 +1829,100 @@ export default function App() {
 
                   {/* Preferences Editor */}
                   <div className="space-y-4 pt-4 border-t border-zinc-100 dark:border-zinc-800">
-                    <h4 className="text-sm font-bold text-zinc-900 dark:text-white">Edit Preferences</h4>
+                    <h4 className="text-sm font-bold text-zinc-900 dark:text-white">
+                      Edit Preferences
+                    </h4>
 
-                    {(['genres', 'dietary', 'interests'] as const).map(prefType => (
-                      <div key={prefType} className="bg-white/20 dark:bg-zinc-900/40 backdrop-blur-sm p-4 rounded-2xl border border-white/10 dark:border-zinc-800/50">
-                        <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-3 block">{prefType}</label>
-                        <div className="flex flex-wrap gap-2 mb-3">
-                          {editForm.preferences[prefType].map(tag => (
-                            <span key={tag} className="px-3 py-1 bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-lg text-xs font-medium flex items-center gap-1 group">
-                              {tag}
-                              <button
-                                onClick={() => setEditForm(prev => ({
-                                  ...prev,
-                                  preferences: { ...prev.preferences, [prefType]: prev.preferences[prefType].filter(t => t !== tag) }
-                                }))}
-                                className="opacity-50 hover:opacity-100 hover:text-rose-500 transition-colors"
+                    {(["genres", "dietary", "interests"] as const).map(
+                      (prefType) => (
+                        <div
+                          key={prefType}
+                          className="bg-white/20 dark:bg-zinc-900/40 backdrop-blur-sm p-4 rounded-2xl border border-white/10 dark:border-zinc-800/50"
+                        >
+                          <label className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-3 block">
+                            {prefType}
+                          </label>
+                          <div className="flex flex-wrap gap-2 mb-3">
+                            {editForm.preferences[prefType].map((tag) => (
+                              <span
+                                key={tag}
+                                className="px-3 py-1 bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 rounded-lg text-xs font-medium flex items-center gap-1 group"
                               >
-                                <X size={12} />
-                              </button>
-                            </span>
-                          ))}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <input
-                            type="text"
-                            value={tagInputs[prefType]}
-                            onChange={e => setTagInputs(prev => ({ ...prev, [prefType]: e.target.value }))}
-                            onKeyDown={e => {
-                              if (e.key === 'Enter' && tagInputs[prefType].trim()) {
-                                e.preventDefault();
-                                const newTag = tagInputs[prefType].trim();
-                                if (!editForm.preferences[prefType].includes(newTag)) {
-                                  setEditForm(prev => ({
+                                {tag}
+                                <button
+                                  onClick={() =>
+                                    setEditForm((prev) => ({
+                                      ...prev,
+                                      preferences: {
+                                        ...prev.preferences,
+                                        [prefType]: prev.preferences[
+                                          prefType
+                                        ].filter((t) => t !== tag),
+                                      },
+                                    }))
+                                  }
+                                  className="opacity-50 hover:opacity-100 hover:text-rose-500 transition-colors"
+                                >
+                                  <X size={12} />
+                                </button>
+                              </span>
+                            ))}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              value={tagInputs[prefType]}
+                              onChange={(e) =>
+                                setTagInputs((prev) => ({
+                                  ...prev,
+                                  [prefType]: e.target.value,
+                                }))
+                              }
+                              onKeyDown={(e) => {
+                                if (
+                                  e.key === "Enter" &&
+                                  tagInputs[prefType].trim()
+                                ) {
+                                  e.preventDefault();
+                                  const newTag = tagInputs[prefType].trim();
+                                  if (
+                                    !editForm.preferences[prefType].includes(
+                                      newTag,
+                                    )
+                                  ) {
+                                    setEditForm((prev) => ({
+                                      ...prev,
+                                      preferences: {
+                                        ...prev.preferences,
+                                        [prefType]: [
+                                          ...prev.preferences[prefType],
+                                          newTag,
+                                        ],
+                                      },
+                                    }));
+                                  }
+                                  setTagInputs((prev) => ({
                                     ...prev,
-                                    preferences: { ...prev.preferences, [prefType]: [...prev.preferences[prefType], newTag] }
+                                    [prefType]: "",
                                   }));
                                 }
-                                setTagInputs(prev => ({ ...prev, [prefType]: '' }));
-                              }
-                            }}
-                            placeholder={`Add ${prefType}... (Press Enter)`}
-                            className="flex-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-600 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-zinc-400 dark:text-white"
-                          />
+                              }}
+                              placeholder={`Add ${prefType}... (Press Enter)`}
+                              className="flex-1 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-600 rounded-xl px-3 py-2 text-xs focus:outline-none focus:border-zinc-400 dark:text-white"
+                            />
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      ),
+                    )}
                   </div>
 
                   <button
                     onClick={() => {
-                      handleUpdateProfile(editForm.bio, editForm.profile_photo, editForm.preferences);
+                      handleUpdateProfile(
+                        editForm.bio,
+                        editForm.profile_photo,
+                        editForm.preferences,
+                      );
                       setIsEditingProfile(false);
                     }}
                     className="w-full mt-6 py-4 bg-zinc-900/80 dark:bg-white/80 backdrop-blur-md text-white dark:text-zinc-900 rounded-2xl font-bold hover:bg-zinc-900 dark:hover:bg-white transition-all shadow-xl border border-white/10 dark:border-zinc-800/50"
@@ -1504,9 +1933,15 @@ export default function App() {
               ) : (
                 <>
                   <div className="mb-8">
-                    <h2 className="text-2xl font-bold text-zinc-900 dark:text-white">{user.name}</h2>
-                    <p className="text-zinc-500 dark:text-zinc-400 text-sm">{user.email}</p>
-                    <p className="mt-4 text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed">{user.bio}</p>
+                    <h2 className="text-2xl font-bold text-zinc-900 dark:text-white">
+                      {user.name}
+                    </h2>
+                    <p className="text-zinc-500 dark:text-zinc-400 text-sm">
+                      {user.email}
+                    </p>
+                    <p className="mt-4 text-zinc-600 dark:text-zinc-400 text-sm leading-relaxed">
+                      {user.bio}
+                    </p>
                   </div>
 
                   <div className="space-y-8">
@@ -1516,33 +1951,66 @@ export default function App() {
                       </h4>
                       <div className="space-y-4">
                         <div>
-                          <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase mb-2">Genres</p>
+                          <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase mb-2">
+                            Genres
+                          </p>
                           <div className="flex flex-wrap gap-2">
-                            {user.preferences.genres.length > 0 ? user.preferences.genres.map(g => (
-                              <span key={g} className="px-3 py-1 bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 rounded-lg text-xs font-medium border border-rose-100 dark:border-rose-900/30">
-                                {g}
+                            {user.preferences.genres.length > 0 ? (
+                              user.preferences.genres.map((g) => (
+                                <span
+                                  key={g}
+                                  className="px-3 py-1 bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 rounded-lg text-xs font-medium border border-rose-100 dark:border-rose-900/30"
+                                >
+                                  {g}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-xs text-zinc-400 italic">
+                                No genres added.
                               </span>
-                            )) : <span className="text-xs text-zinc-400 italic">No genres added.</span>}
+                            )}
                           </div>
                         </div>
                         <div>
-                          <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase mb-2">Dietary</p>
+                          <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase mb-2">
+                            Dietary
+                          </p>
                           <div className="flex flex-wrap gap-2">
-                            {user.preferences.dietary.length > 0 ? user.preferences.dietary.map(d => (
-                              <span key={d} className="px-3 py-1 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-lg text-xs font-medium border border-emerald-100 dark:border-emerald-900/30">
-                                {d}
+                            {user.preferences.dietary.length > 0 ? (
+                              user.preferences.dietary.map((d) => (
+                                <span
+                                  key={d}
+                                  className="px-3 py-1 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-600 dark:text-emerald-400 rounded-lg text-xs font-medium border border-emerald-100 dark:border-emerald-900/30"
+                                >
+                                  {d}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-xs text-zinc-400 italic">
+                                No dietary preferences added.
                               </span>
-                            )) : <span className="text-xs text-zinc-400 italic">No dietary preferences added.</span>}
+                            )}
                           </div>
                         </div>
                         <div>
-                          <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase mb-2">Interests</p>
+                          <p className="text-[10px] font-bold text-zinc-400 dark:text-zinc-500 uppercase mb-2">
+                            Interests
+                          </p>
                           <div className="flex flex-wrap gap-2">
-                            {user.preferences.interests.length > 0 ? user.preferences.interests.map(i => (
-                              <span key={i} className="px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg text-xs font-medium border border-blue-100 dark:border-blue-900/30">
-                                {i}
+                            {user.preferences.interests.length > 0 ? (
+                              user.preferences.interests.map((i) => (
+                                <span
+                                  key={i}
+                                  className="px-3 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 rounded-lg text-xs font-medium border border-blue-100 dark:border-blue-900/30"
+                                >
+                                  {i}
+                                </span>
+                              ))
+                            ) : (
+                              <span className="text-xs text-zinc-400 italic">
+                                No interests added.
                               </span>
-                            )) : <span className="text-xs text-zinc-400 italic">No interests added.</span>}
+                            )}
                           </div>
                         </div>
                       </div>
@@ -1554,14 +2022,22 @@ export default function App() {
                       </h4>
                       {user.bookmarks && user.bookmarks.length > 0 ? (
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                          {user.bookmarks.map(rec => (
-                            <div key={rec.id} className="group relative flex gap-3 p-3 bg-white/20 dark:bg-zinc-900/40 backdrop-blur-sm rounded-2xl border border-white/10 dark:border-zinc-800/50 hover:bg-white/40 dark:hover:bg-zinc-800/60 transition-all cursor-pointer" onClick={() => setSelectedRec(rec)}>
+                          {user.bookmarks.map((rec) => (
+                            <div
+                              key={rec.id}
+                              className="group relative flex gap-3 p-3 bg-white/20 dark:bg-zinc-900/40 backdrop-blur-sm rounded-2xl border border-white/10 dark:border-zinc-800/50 hover:bg-white/40 dark:hover:bg-zinc-800/60 transition-all cursor-pointer"
+                              onClick={() => setSelectedRec(rec)}
+                            >
                               <div className="w-10 h-10 rounded-xl flex-shrink-0 bg-white/30 dark:bg-zinc-800/40 backdrop-blur-md flex items-center justify-center border border-white/10 dark:border-zinc-700/30">
                                 <Sparkles size={16} className="text-zinc-400" />
                               </div>
                               <div className="flex flex-col justify-center overflow-hidden">
-                                <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-1">{rec.category}</span>
-                                <h5 className="font-bold text-sm text-zinc-900 dark:text-white truncate">{rec.title}</h5>
+                                <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 dark:text-zinc-500 mb-1">
+                                  {rec.category}
+                                </span>
+                                <h5 className="font-bold text-sm text-zinc-900 dark:text-white truncate">
+                                  {rec.title}
+                                </h5>
                               </div>
                               <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-all z-10">
                                 <button
@@ -1577,20 +2053,33 @@ export default function App() {
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    const newBookmarks = user.bookmarks.filter(b => b.id !== rec.id);
-                                    setUser({ ...user, bookmarks: newBookmarks });
+                                    const newBookmarks = user.bookmarks.filter(
+                                      (b) => b.id !== rec.id,
+                                    );
+                                    setUser({
+                                      ...user,
+                                      bookmarks: newBookmarks,
+                                    });
 
-                                    fetch('/api/user/update', {
-                                      method: 'POST',
-                                      headers: { 'Content-Type': 'application/json' },
+                                    fetch("/api/user/update", {
+                                      method: "POST",
+                                      headers: {
+                                        "Content-Type": "application/json",
+                                        "x-csrf-token": csrfToken,
+                                      },
                                       body: JSON.stringify({
                                         email: user.email,
                                         bio: user.bio,
                                         profile_photo: user.profile_photo,
                                         preferences: user.preferences,
-                                        bookmarks: newBookmarks
+                                        bookmarks: newBookmarks,
                                       }),
-                                    }).catch(err => console.error("Failed to sync bookmark deletion", err));
+                                    }).catch((err) =>
+                                      console.error(
+                                        "Failed to sync bookmark deletion",
+                                        err,
+                                      ),
+                                    );
                                   }}
                                   className="p-1.5 bg-white dark:bg-zinc-700 rounded-full text-zinc-400 hover:text-rose-500 shadow-sm"
                                   title="Remove bookmark"
@@ -1603,9 +2092,17 @@ export default function App() {
                         </div>
                       ) : (
                         <div className="p-6 bg-zinc-50 dark:bg-zinc-800 rounded-2xl border border-zinc-100 dark:border-zinc-700 text-center">
-                          <Bookmark size={24} className="mx-auto text-zinc-300 dark:text-zinc-600 mb-2" />
-                          <p className="text-sm font-bold text-zinc-500 dark:text-zinc-400">No saved bookmarks yet</p>
-                          <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">Click the bookmark icon on any recommendation to save it here.</p>
+                          <Bookmark
+                            size={24}
+                            className="mx-auto text-zinc-300 dark:text-zinc-600 mb-2"
+                          />
+                          <p className="text-sm font-bold text-zinc-500 dark:text-zinc-400">
+                            No saved bookmarks yet
+                          </p>
+                          <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">
+                            Click the bookmark icon on any recommendation to
+                            save it here.
+                          </p>
                         </div>
                       )}
                     </section>
@@ -1627,15 +2124,24 @@ export default function App() {
       </Modal>
 
       {/* Manual Location Modal */}
-      <Modal isOpen={showManualLocation} onClose={() => setShowManualLocation(false)}>
+      <Modal
+        isOpen={showManualLocation}
+        onClose={() => setShowManualLocation(false)}
+      >
         <div className="p-8">
-          <h2 className="text-2xl font-bold mb-4 text-zinc-900 dark:text-white">Set Location Manually</h2>
+          <h2 className="text-2xl font-bold mb-4 text-zinc-900 dark:text-white">
+            Set Location Manually
+          </h2>
           <p className="text-zinc-500 dark:text-zinc-400 text-sm mb-6">
-            If automatic location detection isn't working, you can enter your city and state manually to get relevant recommendations.
+            If automatic location detection isn't working, you can enter your
+            city and state manually to get relevant recommendations.
           </p>
           <div className="space-y-4">
             <div className="relative">
-              <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500" size={18} />
+              <MapPin
+                className="absolute left-4 top-1/2 -translate-y-1/2 text-zinc-400 dark:text-zinc-500"
+                size={18}
+              />
               <input
                 type="text"
                 placeholder="e.g., New York, NY"
@@ -1643,7 +2149,7 @@ export default function App() {
                 onChange={(e) => setManualLocationInput(e.target.value)}
                 className="w-full pl-12 pr-4 py-4 bg-zinc-50 dark:bg-zinc-800 border border-zinc-100 dark:border-zinc-700 rounded-2xl focus:outline-none focus:ring-2 focus:ring-zinc-900/10 dark:focus:ring-white/10 transition-all text-zinc-900 dark:text-white"
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter' && manualLocationInput) {
+                  if (e.key === "Enter" && manualLocationInput) {
                     handleSetLocation(manualLocationInput);
                     setShowManualLocation(false);
                   }
@@ -1683,11 +2189,18 @@ export default function App() {
                 <Sparkles size={18} />
               </div>
               <div>
-                <h3 className="text-sm font-bold text-zinc-900 dark:text-white">Ask Electa</h3>
-                <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">About {chatTarget?.title}</p>
+                <h3 className="text-sm font-bold text-zinc-900 dark:text-white">
+                  Ask Electa
+                </h3>
+                <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">
+                  About {chatTarget?.title}
+                </p>
               </div>
             </div>
-            <button onClick={() => setIsChatOpen(false)} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors text-zinc-400">
+            <button
+              onClick={() => setIsChatOpen(false)}
+              className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-full transition-colors text-zinc-400"
+            >
               <X size={20} />
             </button>
           </div>
@@ -1696,9 +2209,15 @@ export default function App() {
           <div className="flex-1 overflow-y-auto p-6 space-y-4">
             {chatMessages.length === 0 && (
               <div className="py-4">
-                <p className="text-sm font-bold text-zinc-900 dark:text-white mb-4 px-2">Suggested Questions</p>
+                <p className="text-sm font-bold text-zinc-900 dark:text-white mb-4 px-2">
+                  Suggested Questions
+                </p>
                 <div className="grid grid-cols-1 gap-2">
-                  {(SAMPLE_QUESTIONS[chatTarget?.category.toLowerCase() || 'default'] || SAMPLE_QUESTIONS.default).map((q, idx) => (
+                  {(
+                    SAMPLE_QUESTIONS[
+                      chatTarget?.category.toLowerCase() || "default"
+                    ] || SAMPLE_QUESTIONS.default
+                  ).map((q, idx) => (
                     <button
                       key={idx}
                       onClick={() => setChatInput(q)}
@@ -1717,34 +2236,38 @@ export default function App() {
                 animate={{ opacity: 1, y: 0 }}
                 className={cn(
                   "flex",
-                  msg.role === 'user' ? "justify-end" : "justify-start"
+                  msg.role === "user" ? "justify-end" : "justify-start",
                 )}
               >
-                <div className={cn(
-                  "max-w-[80%] rounded-2xl px-4 py-3 text-sm font-medium leading-relaxed shadow-sm",
-                  msg.role === 'user'
-                    ? "bg-rose-500/80 backdrop-blur-md text-white rounded-tr-none shadow-lg shadow-rose-500/20"
-                    : "bg-white/40 dark:bg-zinc-800/40 backdrop-blur-md text-zinc-800 dark:text-zinc-200 rounded-tl-none border border-white/20 dark:border-zinc-700/30"
-                )}>
-                  {msg.role === 'assistant' ? (
+                <div
+                  className={cn(
+                    "max-w-[80%] rounded-2xl px-4 py-3 text-sm font-medium leading-relaxed shadow-sm",
+                    msg.role === "user"
+                      ? "bg-rose-500/80 backdrop-blur-md text-white rounded-tr-none shadow-lg shadow-rose-500/20"
+                      : "bg-white/40 dark:bg-zinc-800/40 backdrop-blur-md text-zinc-800 dark:text-zinc-200 rounded-tl-none border border-white/20 dark:border-zinc-700/30",
+                  )}
+                >
+                  {msg.role === "assistant" ? (
                     <div className="whitespace-pre-wrap break-words">
-                      {msg.content.split(/(\[.*?\]\(.*?\))/g).map((part, index) => {
-                        const match = part.match(/\[(.*?)\]\((.*?)\)/);
-                        if (match) {
-                          return (
-                            <a
-                              key={index}
-                              href={match[2]}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-rose-600 dark:text-rose-400 font-bold underline hover:text-rose-700 dark:hover:text-rose-300 transition-colors"
-                            >
-                              {match[1]}
-                            </a>
-                          );
-                        }
-                        return part;
-                      })}
+                      {msg.content
+                        .split(/(\[.*?\]\(.*?\))/g)
+                        .map((part, index) => {
+                          const match = part.match(/\[(.*?)\]\((.*?)\)/);
+                          if (match) {
+                            return (
+                              <a
+                                key={index}
+                                href={match[2]}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-rose-600 dark:text-rose-400 font-bold underline hover:text-rose-700 dark:hover:text-rose-300 transition-colors"
+                              >
+                                {match[1]}
+                              </a>
+                            );
+                          }
+                          return part;
+                        })}
                     </div>
                   ) : (
                     msg.content
@@ -1769,7 +2292,7 @@ export default function App() {
                 placeholder="Ask a question..."
                 value={chatInput}
                 onChange={(e) => setChatInput(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
+                onKeyDown={(e) => e.key === "Enter" && handleSendMessage()}
                 disabled={isChatLoading}
                 className="flex-1 bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-rose-500/20 disabled:opacity-50 dark:text-white"
               />
@@ -1804,4 +2327,3 @@ export default function App() {
     </div>
   );
 }
-

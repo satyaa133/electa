@@ -19,13 +19,20 @@ export async function getRecommendations(
   preferences: string[],
   history: string[],
   location?: string,
-  subCategory?: string | null
+  subCategory?: string | null,
 ): Promise<Recommendation[]> {
   try {
-    const response = await fetch('/api/recommendations', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ mood, category, preferences, history, location, subCategory })
+    const response = await fetch("/api/recommendations", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        mood,
+        category,
+        preferences,
+        history,
+        location,
+        subCategory,
+      }),
     });
 
     if (!response.ok) {
@@ -45,13 +52,13 @@ export async function getRecommendations(
 export async function askFollowUp(
   recommendation: Recommendation,
   question: string,
-  chatHistory: { role: 'user' | 'assistant'; content: string }[]
+  chatHistory: { role: "user" | "assistant"; content: string }[],
 ): Promise<string> {
   try {
-    const response = await fetch('/api/ask', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ recommendation, question, chatHistory })
+    const response = await fetch("/api/ask", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ recommendation, question, chatHistory }),
     });
 
     if (!response.ok) {

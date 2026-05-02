@@ -10,11 +10,6 @@ lerna-debug.log*
 # Node modules
 node_modules
 
-# Dependency lock files
-package-lock.json
-yarn.lock
-pnpm-lock.yaml
-
 # Build and Vercel
 dist
 dist-ssr
@@ -41,6 +36,19 @@ dist-ssr
 .env.test.local
 .env.production.local
 *.env*
+
+# Security / Keys / Certificates
+*.pem
+*.key
+*.crt
+*.cert
+secrets/
+
+# Security Reports and Templates
+report.md
+REMEDIATION_IMPLEMENTATION_GUIDE.md
+SECURITY_CONFIG_TEMPLATES.md
+VULNERABILITY_FIXES.md
 
 
 # Testing and coverage
