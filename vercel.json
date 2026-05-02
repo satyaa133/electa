@@ -1,37 +1,37 @@
 {
-    "buildCommand": "npm run build",
-    "installCommand": "npm install",
-    "outputDirectory": "dist",
-    "framework": "vite",
-    "functions": {
-        "api/**/*.ts": {
-            "maxDuration": 60
-        }
+  "buildCommand": "npm run build",
+  "installCommand": "npm install",
+  "outputDirectory": "dist",
+  "framework": "vite",
+  "functions": {
+    "api/**/*.ts": {
+      "maxDuration": 60
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/api/recommendations",
+      "destination": "/api/index.ts"
     },
-    "rewrites": [
-        {
-            "source": "/api/recommendations",
-            "destination": "/api/index.ts"
-        },
-        {
-            "source": "/api/ask",
-            "destination": "/api/index.ts"
-        },
-        {
-            "source": "/api/location",
-            "destination": "/api/index.ts"
-        },
-        {
-            "source": "/api/auth/(.*)",
-            "destination": "/api/index.ts"
-        },
-        {
-            "source": "/api/user/(.*)",
-            "destination": "/api/index.ts"
-        },
-        {
-            "source": "/(.*)",
-            "destination": "/index.html"
-        }
-    ]
+    {
+      "source": "/api/ask",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/api/location",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/api/auth/(.*)",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/api/user/(.*)",
+      "destination": "/api/index.ts"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
 }

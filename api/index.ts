@@ -42,7 +42,9 @@ async function generateContentWithRetry(
 ) {
   let lastError: any = null;
   if (!keyManager) {
-    const err: any = new Error("API Keys are not configured in Vercel Environment Variables.");
+    const err: any = new Error(
+      "API Keys are not configured in Vercel Environment Variables.",
+    );
     err.status = 503;
     throw err;
   }
@@ -83,10 +85,15 @@ async function generateContentWithRetry(
       throw err;
     }
   }
-  
+
   if (lastError) {
     const errMsg = lastError.message?.toLowerCase() || "";
-    if (lastError.status === 429 || errMsg.includes("429") || errMsg.includes("quota") || errMsg.includes("exhausted")) {
+    if (
+      lastError.status === 429 ||
+      errMsg.includes("429") ||
+      errMsg.includes("quota") ||
+      errMsg.includes("exhausted")
+    ) {
       lastError.status = 429;
     }
   }
@@ -223,12 +230,10 @@ app.get("/api/location", async (req, res) => {
       return res.json({ location: loc, source: "ip-api.com", ip: clientIp });
     }
 
-    res
-      .status(404)
-      .json({
-        error: "Location could not be determined from IP.",
-        ip: clientIp,
-      });
+    res.status(404).json({
+      error: "Location could not be determined from IP.",
+      ip: clientIp,
+    });
   } catch (err: any) {
     logger.error("Location fetch failed", { error: err.message });
     res.status(500).json({ error: "Failed to fetch location" });
