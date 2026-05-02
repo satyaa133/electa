@@ -795,6 +795,8 @@ export default function App() {
         console.error("Failed to fetch recommendations", error);
         if (error.message === "RATE_LIMIT") {
           setApiError("Limit reached.");
+        } else if (error.message) {
+          setApiError(error.message);
         } else {
           setApiError("Try after few hours");
         }

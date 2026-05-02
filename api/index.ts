@@ -41,7 +41,13 @@ async function generateContentWithRetry(
   maxRetries = 3,
 ) {
   let lastError: any = null;
-  const totalPossible = Math.max(maxRetries, keyManager?.getTotalKeys() || 1);
+  if (!keyManager) {
+    const err: any = new Error("API Keys are not configured in Vercel Environment Variables.");
+    err.status = 503;
+    throw err;
+  }
+
+  const totalPossible = Math.max(maxRetries, keyManager.getTotalKeys() || 1);
 
   for (let i = 0; i < totalPossible; i++) {
     const apiKey = keyManager.getNextKey();
