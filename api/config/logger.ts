@@ -12,17 +12,9 @@ export const logger = winston.createLogger({
   ),
   defaultMeta: { service: "electa-api" },
   transports: [
-    new winston.transports.File({
-      filename: path.join(logsDir, "error.log"),
-      level: "error",
-      maxsize: 5242880, // 5MB
-      maxFiles: 5,
-    }),
-    new winston.transports.File({
-      filename: path.join(logsDir, "combined.log"),
-      maxsize: 5242880,
-      maxFiles: 5,
-    }),
+    // Vercel/Serverless environments have a read-only filesystem.
+    // File transports will crash the application on startup (EROFS).
+    // We rely solely on Console transport which Vercel captures in its Logs dashboard.
     // Always log to console for development ease
     new winston.transports.Console({
       format: winston.format.combine(
