@@ -77,6 +77,13 @@ async function generateContentWithRetry(
       throw err;
     }
   }
+  
+  if (lastError) {
+    const errMsg = lastError.message?.toLowerCase() || "";
+    if (lastError.status === 429 || errMsg.includes("429") || errMsg.includes("quota") || errMsg.includes("exhausted")) {
+      lastError.status = 429;
+    }
+  }
   throw lastError;
 }
 
