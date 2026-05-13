@@ -1,6 +1,6 @@
 import express from "express";
 import dotenv from "dotenv";
-dotenv.config({ path: ".env.local" });
+dotenv.config({ path: ".env" });
 import bcrypt from "bcryptjs";
 import axios from "axios";
 import { neon } from "@neondatabase/serverless";
@@ -160,9 +160,17 @@ async function initDB() {
         preferences TEXT DEFAULT '{"genres":[],"dietary":[],"interests":[]}',
         profile_photo TEXT DEFAULT '',
         bookmarks TEXT DEFAULT '[]',
-        location TEXT DEFAULT ''
+        location TEXT DEFAULT '',
+        activities TEXT DEFAULT '[]'
       )
     `;
+    try {
+      await sql`ALTER TABLE users ADD COLUMN activities TEXT DEFAULT '[]'`;
+    } catch (e: any) {
+      if (!e.message.includes('already exists')) {
+        logger.warn("Could not add activities column: " + e.message);
+      }
+    }
     await sql`
       CREATE TABLE IF NOT EXISTS recommendations_cache (
         id SERIAL PRIMARY KEY,
@@ -557,6 +565,7 @@ app.post(
         preferences: { genres: [], dietary: [], interests: [] },
         bookmarks: [],
         location: "",
+        activities: [],
       };
 
       res.json({ user });
@@ -612,6 +621,7 @@ app.post(
         preferences: JSON.parse(userRecord.preferences),
         bookmarks: JSON.parse(userRecord.bookmarks || "[]"),
         location: userRecord.location || "",
+        activities: JSON.parse(userRecord.activities || "[]"),
       };
 
       res.json({ user });
@@ -631,7 +641,7 @@ app.post(
   userUpdateValidators,
   handleValidationErrors,
   async (req: any, res: any) => {
-    const { email, bio, profile_photo, preferences, bookmarks, location } =
+    const { email, bio, profile_photo, preferences, bookmarks, location, activities } =
       req.body;
     if (req.user?.email !== email) {
       return res.status(403).json({ error: "Unauthorized" });
@@ -647,7 +657,8 @@ app.post(
           profile_photo = ${profile_photo || ""}, 
           preferences = ${JSON.stringify(preferences || { genres: [], dietary: [], interests: [] })}, 
           bookmarks = ${JSON.stringify(bookmarks || [])},
-          location = ${location || ""}
+          location = ${location || ""},
+          activities = ${JSON.stringify(activities || [])}
       WHERE email = ${email}
     `;
 
@@ -665,6 +676,7 @@ app.post(
         preferences: JSON.parse(userRecord.preferences),
         bookmarks: JSON.parse(userRecord.bookmarks || "[]"),
         location: userRecord.location || "",
+        activities: JSON.parse(userRecord.activities || "[]"),
       };
 
       res.json({ user });
@@ -763,6 +775,15 @@ app.get("/api/auth/google/callback", async (req, res) => {
     }
 
     const userRecord = rows[0];
+    
+    const tokens = sessionManager.createSessionTokens(userRecord.id, userRecord.email);
+    res.cookie("accessToken", tokens.accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 15 * 60 * 1000,
+      path: "/",
+    });
     const user = {
       email: userRecord.email,
       name: userRecord.name,
@@ -771,6 +792,7 @@ app.get("/api/auth/google/callback", async (req, res) => {
       preferences: JSON.parse(userRecord.preferences),
       bookmarks: JSON.parse(userRecord.bookmarks || "[]"),
       location: userRecord.location || "",
+      activities: JSON.parse(userRecord.activities || "[]"),
     };
     const safeUser = JSON.stringify(user).replace(/</g, "\\u003c");
     res.send(
@@ -882,6 +904,15 @@ app.get("/api/auth/github/callback", async (req, res) => {
     }
 
     const userRecord = rows[0];
+
+    const tokens = sessionManager.createSessionTokens(userRecord.id, userRecord.email);
+    res.cookie("accessToken", tokens.accessToken, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "strict",
+      maxAge: 15 * 60 * 1000,
+      path: "/",
+    });
     const user = {
       email: userRecord.email,
       name: userRecord.name,
@@ -890,6 +921,7 @@ app.get("/api/auth/github/callback", async (req, res) => {
       preferences: JSON.parse(userRecord.preferences),
       bookmarks: JSON.parse(userRecord.bookmarks || "[]"),
       location: userRecord.location || "",
+      activities: JSON.parse(userRecord.activities || "[]"),
     };
     const safeUser = JSON.stringify(user).replace(/</g, "\\u003c");
     res.send(

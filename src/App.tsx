@@ -46,7 +46,7 @@ import {
   Recommendation,
   askFollowUp,
 } from "./services/gemini";
-import { useTheme } from "./context/ThemeContext";
+import logoIcon from "./assets/logo-icon.png";
 
 // --- Constants ---
 
@@ -169,10 +169,12 @@ const Modal = ({
   isOpen,
   onClose,
   children,
+  zIndex = 50,
 }: {
   isOpen: boolean;
   onClose: () => void;
   children: React.ReactNode;
+  zIndex?: number;
 }) => (
   <AnimatePresence>
     {isOpen && (
@@ -182,13 +184,15 @@ const Modal = ({
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           onClick={onClose}
-          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4"
+          style={{ zIndex }}
         />
         <motion.div
           initial={{ opacity: 0, scale: 0.9, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
-          className="fixed inset-0 z-[60] flex items-center justify-center pointer-events-none p-4"
+          className="fixed inset-0 flex items-center justify-center pointer-events-none p-4"
+          style={{ zIndex: zIndex + 10 }}
         >
           <div className="bg-white/20 dark:bg-zinc-950/40 backdrop-blur-3xl w-full max-w-2xl rounded-[40px] overflow-hidden shadow-2xl dark:shadow-2xl dark:shadow-black/50 pointer-events-auto flex flex-col max-h-[90vh] relative border border-white/20 dark:border-zinc-800/50">
             <button
@@ -356,6 +360,14 @@ interface UserProfile {
   };
   bookmarks: Recommendation[];
   location?: string;
+  activities?: {
+    id: string;
+    type: string;
+    itemTitle: string;
+    category?: string;
+    timestamp: string;
+    rec?: Recommendation;
+  }[];
 }
 
 const LoadingText = () => {
@@ -577,18 +589,17 @@ export default function App() {
   });
   const [csrfToken, setCsrfToken] = useState<string>("");
 
-  // Theme hook - must be at top level before any conditional returns
-  const { isDark, toggleTheme } = useTheme();
+  // Theme context removed
 
   useEffect(() => {
     // Fetch CSRF token
     fetch("/api/csrf-token")
       .then((res) => res.json())
       .then((data) => setCsrfToken(data.csrfToken || ""))
-      .catch(() => {});
+      .catch(() => { });
 
     // Basic API health check
-    fetch("/api/location").catch(() => {});
+    fetch("/api/location").catch(() => { });
   }, []);
 
   useEffect(() => {
@@ -641,7 +652,7 @@ export default function App() {
           bookmarks: user.bookmarks,
           location: newLoc,
         }),
-      }).catch(() => {});
+      }).catch(() => { });
     }
   };
 
@@ -654,7 +665,7 @@ export default function App() {
         handleSetLocation(data.location || "Unknown City");
         return true;
       }
-    } catch (err) {}
+    } catch (err) { }
     return false;
   };
 
@@ -745,10 +756,10 @@ export default function App() {
       try {
         const prefs = user
           ? [
-              ...(user.preferences?.genres || []),
-              ...(user.preferences?.dietary || []),
-              ...(user.preferences?.interests || []),
-            ]
+            ...(user.preferences?.genres || []),
+            ...(user.preferences?.dietary || []),
+            ...(user.preferences?.interests || []),
+          ]
           : [];
         // Use the raw response to get the context
         const response = await fetch("/api/recommendations", {
@@ -773,7 +784,7 @@ export default function App() {
           try {
             const errorText = await response.text();
             errorData = JSON.parse(errorText);
-          } catch (e) {}
+          } catch (e) { }
           throw new Error(
             errorData?.error || "Failed to fetch recommendations",
           );
@@ -885,6 +896,85 @@ export default function App() {
 
       if (!likedIds.has(titleKey)) {
         setHistory((h) => [...h, item.title].slice(-5));
+        
+        if (user) {
+          const newPrefs = { ...user.preferences };
+          
+          let toAdd: string[] = [];
+          if (item.details?.tags && Array.isArray(item.details.tags)) {
+            toAdd = [...item.details.tags];
+          } else if (item.details?.genres && Array.isArray(item.details.genres)) {
+            toAdd = [...item.details.genres];
+          } else if (item.details?.genre) {
+            toAdd = typeof item.details.genre === 'string' ? item.details.genre.split(',').map((s: string)=>s.trim()) : [];
+          } else if (item.details?.cuisine) {
+            toAdd = [item.details.cuisine];
+          }
+          
+          if (toAdd.length > 0) {
+            if (item.category === "movies" || item.category === "movie" || item.category === "music" || item.category === "books" || item.category === "book") {
+              newPrefs.genres = [...new Set([...newPrefs.genres, ...toAdd])];
+            } else if (item.category === "restaurants" || item.category === "food" || item.category === "restaurant") {
+              newPrefs.dietary = [...new Set([...newPrefs.dietary, ...toAdd])];
+            } else {
+              newPrefs.interests = [...new Set([...newPrefs.interests, ...toAdd])];
+            }
+          }
+
+          const newActivities = [
+            {
+              id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+              type: "like",
+              itemTitle: item.title,
+              category: item.category,
+              timestamp: new Date().toISOString(),
+              rec: item,
+            },
+            ...(user.activities || [])
+          ].slice(0, 50);
+
+          const updatedUser = { ...user, preferences: newPrefs, activities: newActivities };
+          setUser(updatedUser);
+
+          fetch("/api/user/update", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-csrf-token": csrfToken,
+            },
+            credentials: "include",
+            body: JSON.stringify({
+              email: updatedUser.email,
+              bio: updatedUser.bio,
+              profile_photo: updatedUser.profile_photo,
+              preferences: updatedUser.preferences,
+              bookmarks: updatedUser.bookmarks,
+              activities: updatedUser.activities,
+            }),
+          }).catch(() => {});
+        }
+      } else if (user) {
+        // Remove like activity if unliking
+        const newActivities = (user.activities || []).filter(a => normalizeTitle(a.itemTitle) !== titleKey);
+        const updatedUser = { ...user, activities: newActivities };
+        setUser(updatedUser);
+
+        fetch("/api/user/update", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-csrf-token": csrfToken,
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            email: updatedUser.email,
+            bio: updatedUser.bio,
+            profile_photo: updatedUser.profile_photo,
+            preferences: updatedUser.preferences,
+            bookmarks: updatedUser.bookmarks,
+            activities: updatedUser.activities,
+          }),
+        }).catch(() => {});
       }
     }
 
@@ -903,6 +993,62 @@ export default function App() {
         next.delete(titleKey);
         return next;
       });
+
+      if (!dislikedIds.has(titleKey) && user) {
+        const newActivities = [
+          {
+            id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+            type: "dislike",
+            itemTitle: item.title,
+            category: item.category,
+            timestamp: new Date().toISOString(),
+            rec: item,
+          },
+          ...(user.activities || []).filter(a => normalizeTitle(a.itemTitle) !== titleKey)
+        ].slice(0, 50);
+
+        const updatedUser = { ...user, activities: newActivities };
+        setUser(updatedUser);
+
+        fetch("/api/user/update", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-csrf-token": csrfToken,
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            email: updatedUser.email,
+            bio: updatedUser.bio,
+            profile_photo: updatedUser.profile_photo,
+            preferences: updatedUser.preferences,
+            bookmarks: updatedUser.bookmarks,
+            activities: updatedUser.activities,
+          }),
+        }).catch(() => {});
+      } else if (user) {
+        // Remove dislike activity if undisliking
+        const newActivities = (user.activities || []).filter(a => normalizeTitle(a.itemTitle) !== titleKey);
+        const updatedUser = { ...user, activities: newActivities };
+        setUser(updatedUser);
+
+        fetch("/api/user/update", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-csrf-token": csrfToken,
+          },
+          credentials: "include",
+          body: JSON.stringify({
+            email: updatedUser.email,
+            bio: updatedUser.bio,
+            profile_photo: updatedUser.profile_photo,
+            preferences: updatedUser.preferences,
+            bookmarks: updatedUser.bookmarks,
+            activities: updatedUser.activities,
+          }),
+        }).catch(() => {});
+      }
     }
 
     if (type === "save" && user) {
@@ -912,10 +1058,10 @@ export default function App() {
       );
       const newBookmarks = isBookmarked
         ? user.bookmarks.filter(
-            (b: any) =>
-              b.id !== id &&
-              normalizeTitle(b.title) !== normalizeTitle(item.title),
-          )
+          (b: any) =>
+            b.id !== id &&
+            normalizeTitle(b.title) !== normalizeTitle(item.title),
+        )
         : [item, ...user.bookmarks];
 
       const updatedUser = { ...user, bookmarks: newBookmarks };
@@ -928,14 +1074,16 @@ export default function App() {
           "Content-Type": "application/json",
           "x-csrf-token": csrfToken,
         },
+        credentials: "include",
         body: JSON.stringify({
           email: user.email,
           bio: user.bio,
           profile_photo: user.profile_photo,
           preferences: user.preferences,
           bookmarks: newBookmarks,
+          activities: user.activities || [],
         }),
-      }).catch(() => {});
+      }).catch(() => { });
     }
   };
 
@@ -1000,12 +1148,14 @@ export default function App() {
           "Content-Type": "application/json",
           "x-csrf-token": csrfToken,
         },
+        credentials: "include",
         body: JSON.stringify({
           email: user.email,
           bio: newBio,
           profile_photo: newPhoto,
           preferences: newPrefs,
           bookmarks: user.bookmarks,
+          activities: user.activities || [],
         }),
       });
       const data = await response.json();
@@ -1130,25 +1280,15 @@ export default function App() {
     return (
       <div className="min-h-screen bg-[#F8F9FA] dark:bg-zinc-950 flex flex-col font-sans relative">
         <AppBackground />
-        <header className="absolute top-0 left-0 w-full p-6 md:p-8 flex justify-between items-center z-10 pointer-events-none">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-white/40 dark:bg-zinc-900/40 backdrop-blur-md text-zinc-900 dark:text-white rounded-xl pointer-events-auto shadow-sm border border-white/20 dark:border-zinc-800/50">
-              <Sparkles size={20} />
-            </div>
-            <span className="font-bold text-xl tracking-tight text-zinc-900 dark:text-white pointer-events-auto">
-              Electa
-            </span>
-          </div>
-          <button
-            onClick={toggleTheme}
-            className="p-2 rounded-full text-zinc-400 dark:text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors pointer-events-auto"
-            title={isDark ? "Switch to light mode" : "Switch to dark mode"}
-          >
-            {isDark ? <Sun size={20} /> : <Moon size={20} />}
-          </button>
-        </header>
 
-        <div className="flex-1 flex items-center justify-center p-4 mt-16 md:mt-0 z-0">
+        <div className="flex-1 flex flex-col items-center justify-center p-4 z-0">
+          <motion.img 
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            src={logoIcon} 
+            alt="Electa Logo" 
+            className="h-32 md:h-40 w-auto mb-8 drop-shadow-md z-10" 
+          />
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
@@ -1312,7 +1452,7 @@ export default function App() {
     <div className="min-h-screen bg-[#F8F9FA] dark:bg-zinc-950 text-zinc-900 dark:text-white font-sans overflow-x-hidden relative">
       <AppBackground />
       {/* Header */}
-      <header className="sticky top-0 z-30 bg-white/10 dark:bg-black/10 backdrop-blur-2xl px-4 md:px-6 py-4 transition-all border-b border-white/5">
+      <header className="sticky top-0 z-30 px-4 md:px-6 py-4 transition-all">
         <motion.div
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
@@ -1320,12 +1460,7 @@ export default function App() {
           className="max-w-7xl mx-auto flex items-center justify-between"
         >
           <div className="flex items-center gap-3">
-            <div className="p-2 bg-white/30 dark:bg-zinc-900/40 backdrop-blur-md text-zinc-900 dark:text-white rounded-xl border border-white/10 dark:border-zinc-800/50 shadow-sm">
-              <Sparkles size={20} />
-            </div>
-            <span className="font-bold text-xl tracking-tight text-zinc-900 dark:text-white">
-              Electa
-            </span>
+            <img src={logoIcon} alt="Electa Logo" className="h-36 scale-110 origin-left w-auto drop-shadow-sm hover:scale-110 transition-transform cursor-pointer" />
           </div>
 
           <div className="flex items-center gap-3 md:gap-6">
@@ -1369,15 +1504,7 @@ export default function App() {
                     />
                   </button>
                 </div>
-                <button
-                  onClick={toggleTheme}
-                  className="p-2.5 rounded-full text-zinc-500 dark:text-zinc-400 bg-white/20 dark:bg-zinc-800/40 backdrop-blur-md border border-white/10 dark:border-zinc-700/30 hover:bg-white/40 dark:hover:bg-zinc-700/60 transition-all shadow-sm"
-                  title={
-                    isDark ? "Switch to light mode" : "Switch to dark mode"
-                  }
-                >
-                  {isDark ? <Sun size={18} /> : <Moon size={18} />}
-                </button>
+
 
                 <button
                   onClick={() => setIsProfileOpen(true)}
@@ -1412,7 +1539,7 @@ export default function App() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.6, ease: "easeOut" }}
-        className="max-w-7xl mx-auto px-4 md:px-6 py-8 md:py-12"
+        className="max-w-7xl mx-auto px-4 md:px-6 pt-2 pb-8 md:pt-4 md:pb-12"
       >
         {/* Mood Section */}
         <motion.section
@@ -1609,7 +1736,7 @@ export default function App() {
                           (b) =>
                             b.id === rec.id ||
                             normalizeTitle(b.title) ===
-                              normalizeTitle(rec.title),
+                            normalizeTitle(rec.title),
                         ) || false
                       }
                     />
@@ -1640,7 +1767,7 @@ export default function App() {
       </motion.main>
 
       {/* Detail Modal */}
-      <Modal isOpen={!!selectedRec} onClose={() => setSelectedRec(null)}>
+      <Modal isOpen={!!selectedRec} onClose={() => setSelectedRec(null)} zIndex={70}>
         {selectedRec && (
           <div className="flex flex-col bg-transparent min-h-full">
             <div className="h-32 flex-shrink-0 relative bg-white/5 dark:bg-black/20 flex items-center px-8 backdrop-blur-md border-b border-white/10">
@@ -2069,12 +2196,14 @@ export default function App() {
                                         "Content-Type": "application/json",
                                         "x-csrf-token": csrfToken,
                                       },
+                                      credentials: "include",
                                       body: JSON.stringify({
                                         email: user.email,
                                         bio: user.bio,
                                         profile_photo: user.profile_photo,
                                         preferences: user.preferences,
                                         bookmarks: newBookmarks,
+                                        activities: user.activities || [],
                                       }),
                                     }).catch((err) =>
                                       console.error(
@@ -2102,10 +2231,80 @@ export default function App() {
                             No saved bookmarks yet
                           </p>
                           <p className="text-xs text-zinc-400 dark:text-zinc-500 mt-1">
-                            Click the bookmark icon on any recommendation to
-                            save it here.
+                            Click the bookmark icon on any recommendation to save it here.
                           </p>
                         </div>
+                      )}
+                    </section>
+
+                    {/* My Activity Section */}
+                    <section>
+                      <h4 className="text-xs font-bold text-zinc-400 dark:text-zinc-500 uppercase tracking-widest mb-4 flex items-center gap-2">
+                        <Activity size={14} /> My Activity
+                      </h4>
+                      {user.activities && user.activities.length > 0 ? (
+                        <div className="space-y-3">
+                          {user.activities.map((act, i) => (
+                            <div
+                              key={act.id || i}
+                              className="group flex items-center gap-4 p-3 bg-white/10 dark:bg-zinc-900/20 rounded-xl border border-white/5 dark:border-zinc-800/30 hover:bg-white/20 dark:hover:bg-zinc-800/40 transition-all cursor-pointer"
+                              onClick={() => act.rec && setSelectedRec(act.rec)}
+                            >
+                              <div className={cn(
+                                "w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0",
+                                act.type === "like" ? "bg-rose-50 dark:bg-rose-900/20" : "bg-zinc-100 dark:bg-zinc-800"
+                              )}>
+                                {act.type === "like" ? (
+                                  <Heart size={12} className="text-rose-500" />
+                                ) : (
+                                  <ThumbsDown size={12} className="text-zinc-500" />
+                                )}
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-sm text-zinc-700 dark:text-zinc-300">
+                                  You {act.type}d <span className="font-bold text-zinc-900 dark:text-white truncate block sm:inline">{act.itemTitle}</span>
+                                </p>
+                                <p className="text-[10px] text-zinc-400 font-medium uppercase tracking-widest mt-0.5">
+                                  {act.category} • {new Date(act.timestamp).toLocaleDateString()}
+                                </p>
+                              </div>
+                              <div className="opacity-0 group-hover:opacity-100 transition-opacity flex items-center gap-2">
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    const newActivities = (user.activities || []).filter(a => a.id !== act.id);
+                                    setUser({ ...user, activities: newActivities });
+                                    
+                                    fetch("/api/user/update", {
+                                      method: "POST",
+                                      headers: {
+                                        "Content-Type": "application/json",
+                                        "x-csrf-token": csrfToken,
+                                      },
+                                      credentials: "include",
+                                      body: JSON.stringify({
+                                        email: user.email,
+                                        bio: user.bio,
+                                        profile_photo: user.profile_photo,
+                                        preferences: user.preferences,
+                                        bookmarks: user.bookmarks,
+                                        activities: newActivities,
+                                      }),
+                                    }).catch(() => {});
+                                  }}
+                                  className="p-1.5 text-zinc-400 hover:text-rose-500 bg-white/50 dark:bg-zinc-800 rounded-lg transition-colors"
+                                  title="Delete activity"
+                                >
+                                  <X size={14} />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-zinc-500 text-sm italic border border-dashed border-zinc-200 dark:border-zinc-800 p-6 rounded-2xl text-center">
+                          No recent activity.
+                        </p>
                       )}
                     </section>
                   </div>
@@ -2182,18 +2381,13 @@ export default function App() {
       </Modal>
 
       {/* Talk to the Card Chat Modal */}
-      <Modal isOpen={isChatOpen} onClose={() => setIsChatOpen(false)}>
+      <Modal isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} zIndex={80}>
         <div className="flex flex-col h-[600px] max-h-[80vh] bg-transparent overflow-hidden">
           {/* Chat Header */}
           <div className="p-6 border-b border-white/10 dark:border-zinc-800/50 flex items-center justify-between bg-white/20 dark:bg-zinc-900/40 backdrop-blur-md">
             <div className="flex items-center gap-4">
-              <div className="w-10 h-10 rounded-xl bg-zinc-900 dark:bg-white flex items-center justify-center text-white dark:text-zinc-900">
-                <Sparkles size={18} />
-              </div>
+              <img src={logoIcon} alt="Electa Logo" className="h-12 w-auto drop-shadow-md" />
               <div>
-                <h3 className="text-sm font-bold text-zinc-900 dark:text-white">
-                  Ask Electa
-                </h3>
                 <p className="text-[10px] text-zinc-500 uppercase tracking-widest font-bold">
                   About {chatTarget?.title}
                 </p>
@@ -2217,7 +2411,7 @@ export default function App() {
                 <div className="grid grid-cols-1 gap-2">
                   {(
                     SAMPLE_QUESTIONS[
-                      chatTarget?.category.toLowerCase() || "default"
+                    chatTarget?.category.toLowerCase() || "default"
                     ] || SAMPLE_QUESTIONS.default
                   ).map((q, idx) => (
                     <button
